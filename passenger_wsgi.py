@@ -1,0 +1,1 @@
+from neo_django.wsgi import application

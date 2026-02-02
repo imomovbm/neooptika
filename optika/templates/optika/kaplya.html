@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load static %}
+{% get_static_prefix as STATIC_PREFIX %}
+{% block title %}Kaplya{% endblock %}
+
+{% block content %}
+<style>
+  .drop-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+    gap: 20px;
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
+  }
+  .drop-img {
+    width: 110px;
+    height: 110px;
+    border-radius: 10px;
+    object-fit: cover;
+    margin-bottom: 8px;
+    border: 2px solid #ddd;
+  }
+  .drop-name {
+    font-weight: 600;
+    font-size: 16px;
+    margin: 4px 0;
+    color: #003366;
+  }
+  .drop-size { font-size: 20px; color: #333; margin-bottom: 8px; }
+
+  table {
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto;
+    border-collapse: collapse;
+    display: none;
+    background: rgba(255,255,255,0.9);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+  }
+  table th, table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+  }
+  table th { background: #0066cc; color: white; font-size: 15px; }
+  .result-img {
+    width: 65px;
+    height: 45px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  @media (max-width: 1600px) { .drop-container { grid-template-columns: repeat(5, 1fr); } }
+  @media (max-width: 1200px) { .drop-container { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 768px) { .drop-container { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) {
+    .drop-container {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(140px, 1fr));
+      justify-content: center;
+      gap: 15px;
+    }
+    .drop-card { width: 100%; height: 270px; max-width: 180px; margin: 0 auto; }
+  }
+</style>
+
+<h2>Lens Liquids</h2>
+
+<form style="display:none;">{% csrf_token %}</form>
+
+<div class="drop-container" id="dropContainer"></div>
+
+<div class="action-buttons">
+  <button id="saveBtn" class="save-btn" type="button">Saqlash</button>
+  <button id="homeBtn" class="exit-btn" type="button">Chiqish</button>
+</div>
+
+<table id="selectedTable">
+  <thead>
+    <tr>
+      <th>Rasm</th>
+      <th>Nomi</th>
+      <th>Hajmi</th>
+      <th>Soni</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  const STATIC_PREFIX = "{{ STATIC_PREFIX }}";
+
+  const drops = [
+    { name: "Aqua Soft (M)", img: "https://tovar.uz/images/company/243/tovar/2429/o_1_5e9ef6758d9e4.png", size: "120ml" },
+    { name: "Aqua Soft (B)", img: "https://tovar.uz/images/company/243/tovar/2429/o_1_5e9ef6758d9e4.png", size: "350ml" },
+    { name: "Avizor Alvera (B)", img: "https://pharmaclick.uz/upload/Sh/imageCache/151/193/193914893823097.webp", size: "350ml" },
+    { name: "Avizor Alvera (M)", img: "https://pharmaclick.uz/upload/Sh/imageCache/151/193/193914893823097.webp", size: "100ml" },
+    { name: "Dream eye (B)", img:"https://m.media-amazon.com/images/I/61Z8FAF+orL.jpg_BO30,255,255,255_UF900,850_SR1910,1000,0,C_QL100_.jpg", size: "360ml" },
+    { name: "Dream eye (M)", img: "https://m.media-amazon.com/images/I/61Z8FAF+orL.jpg_BO30,255,255,255_UF900,850_SR1910,1000,0,C_QL100_.jpg", size:"150ml" },
+    { name: "Bagozza (B)", img: "https://images.uzum.uz/crtv1dc0u44g6joq0ip0/original.jpg", size: "360ml" },
+    { name: "Bagozza (M)", img: "https://images.uzum.uz/crtv1dc0u44g6joq0ip0/original.jpg", size: "150ml" },
+    { name: "Unica Sensitive (B)", img: "https://m.media-amazon.com/images/I/71LfOU-bf5L._UF1000,1000_QL80_.jpg",size: "350ml" },
+    { name: "Unica Sensitive (M)", img: "https://m.media-amazon.com/images/I/71LfOU-bf5L._UF1000,1000_QL80_.jpg",size: "100ml" },
+    { name: "ESO (B)", img: STATIC_PREFIX + "/Images/eso.jpg", size: "360ml" },
+    { name: "ESO (M)", img: STATIC_PREFIX + "/Images/eso.jpg", size: "120ml" },
+    { name: "Opti plus (B)", img: "https://linzy.kg/wp-content/uploads/2022/07/%D0%BE%D0%BF%D1%82%D0%B8%D0%BF%D0%BB%D1%8E%D1%81-scaled.jpg", size: "360ml" },
+    { name: "Opti Plus (M)", img: "https://linzy.kg/wp-content/uploads/2022/07/%D0%BE%D0%BF%D1%82%D0%B8%D0%BF%D0%BB%D1%8E%D1%81-scaled.jpg", size: "150ml" },
+    { name: "Opti Plus капля", img: STATIC_PREFIX + "/Images/opti_plus_kaplya.jpg", size: "12ml" },
+    { name: "Moisture Drops", img:"https://basket-08.wbbasket.ru/vol1133/part113304/113304084/images/big/1.webp",size: "15ml" },
+    { name: "Comfort Drops", img: STATIC_PREFIX + "/Images/kamfort_drops.jpg", size: "20ml" }
+  ];
+
+  const dropContainer = document.getElementById("dropContainer");
+  const table = document.getElementById("selectedTable");
+  const tbody = table.querySelector("tbody");
+
+  drops.forEach(d => {
+    const card = document.createElement("div");
+    card.className = "drop-card";
+
+    card.innerHTML = `
+      <img class="drop-img" src="${d.img}">
+      <div class="drop-name">${d.name}</div>
+      <div class="drop-size">${d.size}</div>
+      <div class="counter">
+        <button type="button">-</button>
+        <input type="number" value="0" min="0">
+        <button type="button">+</button>
+      </div>
+    `;
+
+    const minus = card.querySelector("button:first-child");
+    const plus = card.querySelector("button:last-child");
+    const input = card.querySelector("input");
+
+    minus.addEventListener("click", () => {
+      if (Number(input.value) > 0) {
+        input.value = Number(input.value) - 1;
+        updateResult();
+      }
+    });
+    plus.addEventListener("click", () => {
+      input.value = Number(input.value) + 1;
+      updateResult();
+    });
+    input.addEventListener("input", updateResult);
+
+    dropContainer.appendChild(card);
+  });
+
+  function updateResult() {
+    tbody.innerHTML = "";
+    const selected = [];
+
+    document.querySelectorAll(".drop-card").forEach(c => {
+      const qty = Number(c.querySelector("input").value);
+      if (qty > 0) selected.push({
+        img: c.querySelector(".drop-img").src,
+        name: c.querySelector(".drop-name").textContent,
+        size: c.querySelector(".drop-size").textContent,
+        qty
+      });
+    });
+
+    if (selected.length === 0) {
+      table.style.display = "none";
+      return;
+    }
+
+    selected.forEach(s => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><img class='result-img' src='${s.img}'></td>
+        <td>${s.name}</td>
+        <td>${s.size}</td>
+        <td>${s.qty}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    table.style.display = "table";
+  }
+
+  document.getElementById("homeBtn").addEventListener("click", () => {
+    if (tbody.innerHTML.trim() !== "") {
+      if (confirm("Chiqishni xohlaysizmi? O‘zgarishlar saqlanmaydi.")) {
+        window.location.href = "/Home/Index";
+      }
+    } else {
+      window.location.href = "/Home/Index";
+    }
+  });
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const selected = [];
+    document.querySelectorAll(".drop-card").forEach(c => {
+      const qty = Number(c.querySelector("input").value);
+      if (qty > 0) {
+        selected.push({
+          rasm: c.querySelector(".drop-img").src,
+          nomi: c.querySelector(".drop-name").textContent,
+          turi: c.querySelector(".drop-size").textContent,
+          miqdor: qty
+        });
+      }
+    });
+
+    if (selected.length === 0) {
+      alert("Hech nima tanlanmagan!");
+      return;
+    }
+
+    const response = await fetch("/Linza/SaveKapliya", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": CSRF_TOKEN
+      },
+      body: JSON.stringify(selected)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        alert(data.message);
+        window.location.href = data.redirectUrl;
+      } else {
+        alert(data.message);
+      }
+    } else {
+      alert("Server bilan bog‘lanishda xatolik!");
+    }
+  });
+</script>
+{% endblock %}

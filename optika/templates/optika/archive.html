@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Arxiv{% endblock %}
+
+{% block content %}
+<style>
+  body { font-family: Arial, sans-serif; background: #f2f6fc; margin: 0; padding: 0; }
+  h2 { text-align: center; color: #004080; margin: 10px 0; font-size: 18px; }
+  .table-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 10px;
+    overflow-x: auto;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 4px 6px; text-align: center; border: 1px solid #000; white-space: nowrap; }
+  th { background: #004080; color: #fff; font-size: 13px; }
+  tr:nth-child(even) { background: #f8fbff; }
+  tr:hover { background: #e6f0ff; }
+  .date-time { display: flex; flex-direction: column; font-size: 12px; line-height: 1.2; }
+  .date-time .date { font-weight: bold; color: #004080; }
+  .date-time .time { color: #333; font-size: 11px; }
+  .download-btn {
+    width: 30px; height: 30px; border: none; border-radius: 6px; cursor: pointer;
+    background: green; color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .download-btn:hover { background: #218838; }
+  .download-btn i { font-size: 14px; }
+  @media (max-width: 600px) {
+    table { font-size: 11px; }
+    th, td { padding: 3px; white-space: normal; }
+    .download-btn { width: 26px; height: 26px; }
+    .download-btn i { font-size: 12px; }
+  }
+</style>
+
+<h2>Arxiv</h2>
+<form style="display:none;">{% csrf_token %}</form>
+
+<div class="table-wrapper">
+  <table>
+    <thead>
+      <tr>
+        <th>Sana va vaqt</th>
+        <th>Filial</th>
+        <th>Ism Familiya</th>
+        <th>Yuklab olish</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for archive in archives %}
+      <tr>
+        <td>
+          <div class="date-time">
+            <span class="date">{{ archive.created_at|date:"d.m.Y" }}</span>
+            <span class="time">{{ archive.created_at|date:"H:i" }}</span>
+          </div>
+        </td>
+        <td>{{ archive.filial }}</td>
+        <td>{{ archive.user_full_name }}</td>
+        <td>
+          <button type="button"
+                  class="download-btn"
+                  data-id="{{ archive.id }}"
+                  data-filial="{{ archive.filial }}"
+                  data-date="{{ archive.created_at|date:'Y-m-d_H-i' }}">
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  document.querySelectorAll(".download-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const filial = btn.dataset.filial;
+      const date = btn.dataset.date;
+
+      if (!id) return;
+      if (!confirm("Haqiqatan ham yuklab olmoqchimisiz?")) return;
+
+      try {
+        const res = await fetch("/Home/DownloadPdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+          body: JSON.stringify({ id: parseInt(id) })
+        });
+
+        if (!res.ok) {
+          alert("Faylni yuklashda xatolik!");
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Archive_${filial}_${date}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        alert("Xatolik: " + err.message);
+      }
+    });
+  });
+</script>
+{% endblock %}

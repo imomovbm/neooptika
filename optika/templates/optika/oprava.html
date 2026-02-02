@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Oprava{% endblock %}
+
+{% block content %}
+<style>
+  #framesContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 18px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  @media (min-width: 1400px) { #framesContainer { grid-template-columns: repeat(7, 1fr); } }
+  @media (max-width: 1024px) { #framesContainer { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { #framesContainer { grid-template-columns: repeat(1, 1fr); } }
+
+  .frame-card {
+    border-radius: 14px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    transition: 0.3s;
+    color: #004080;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.15);
+  }
+  .frame-card:hover {
+    transform: translateY(-6px) scale(1.03);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+  }
+  .frame-name {
+    font-weight: 700;
+    font-size: 17px;
+    margin-bottom: 8px;
+    text-align: center;
+    color: #222;
+  }
+  .selection { position: relative; margin-bottom: 6px; }
+  .selection button {
+    width: 100%;
+    text-align: left;
+    padding: 5px 8px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #f0faff;
+    cursor: pointer;
+  }
+  .selection-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    z-index: 10;
+  }
+  .selection-list label {
+    display: block;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .selection-list label:hover { background: #d0ebff; }
+  textarea {
+    width: 100%;
+    resize: none;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 12px;
+    margin-bottom: 6px;
+    height: 22px;
+  }
+</style>
+
+<h2>Ramkalar</h2>
+<form style="display:none;">{% csrf_token %}</form>
+
+<div id="framesContainer"></div>
+
+<div class="action-buttons">
+  <button class="save-btn" id="saveBtn" type="button">Saqlash</button>
+  <button class="exit-btn" id="exitBtn" type="button">Chiqish</button>
+</div>
+
+<table id="selectedTable">
+  <thead>
+    <tr>
+      <th>Brend</th>
+      <th>Ayol/Erkak/Aralash</th>
+      <th>Izoh</th>
+      <th>Miqdor</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  const framesData = [
+    "Alfraganus", "Alanie", "Bagozza", "Bsloc. sor.", "Carmen Cortes", "Carolina Herera",
+    "Corrado", "Enzo", "Fabricio", "Fabricio детс. резинка", "Ferucci", "Ideal деш.", "Ideal дор.",
+    "Moscot", "Oazis", "OCCI", "Polo Sport", "Porsh titan", "Rafaello .saflo", "Romeo насадка",
+    "Terra pro", "Tommy fashion", "Unisign^Lindrach", "VISIBLO", "Viva", "Безободковые",
+    "Гелевый TR-90", "Детс. сред.", "Метал деш.", "Насадка 5 в 1", "Oпр раскладной",
+    "Пласт. сред.", "Пластик деш."
+  ];
+
+  framesData.sort((a, b) => a.localeCompare(b));
+
+  const container = document.getElementById("framesContainer");
+  const selectedTable = document.getElementById("selectedTable");
+  const selectedBody = selectedTable.querySelector("tbody");
+
+  function qtyToColor(qty) {
+    if (qty <= 5) return "#e6f2ff";
+    if (qty <= 25) return "#80bfff";
+    return "#0066cc";
+  }
+
+  framesData.forEach(name => {
+    const card = document.createElement("div");
+    card.className = "frame-card";
+
+    const title = document.createElement("div");
+    title.className = "frame-name";
+    title.textContent = name;
+
+    const selection = document.createElement("div");
+    selection.className = "selection";
+    const selBtn = document.createElement("button"); selBtn.textContent = "Aralash";
+    const selList = document.createElement("div"); selList.className = "selection-list";
+
+    ["Ayol", "Erkak", "Aralash"].forEach(opt => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "gender_" + name;
+      input.value = opt;
+      if (opt === "Aralash") input.checked = true;
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(" " + opt));
+      selList.appendChild(label);
+      label.addEventListener("click", () => {
+        selBtn.textContent = opt;
+        selList.style.display = "none";
+        updateSelected();
+      });
+    });
+
+    selBtn.addEventListener("click", () => {
+      selList.style.display = selList.style.display === "block" ? "none" : "block";
+    });
+
+    selection.appendChild(selBtn);
+    selection.appendChild(selList);
+
+    const note = document.createElement("textarea");
+    note.placeholder = "Izoh...";
+
+    const counter = document.createElement("div"); counter.className = "counter";
+    const minus = document.createElement("button"); minus.textContent = "-";
+    const input = document.createElement("input"); input.type = "text"; input.value = 0;
+    const plus = document.createElement("button"); plus.textContent = "+";
+
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^0-9]/g, '');
+      if (input.value === "") input.value = 0;
+      updateColor();
+      updateSelected();
+    });
+
+    function updateColor() {
+      let val = Number(input.value) || 0;
+      if (val > 50) val = 50;
+      if (val < 0) val = 0;
+      input.value = val;
+      const color = qtyToColor(val);
+      input.style.background = val > 0 ? color : "#fff";
+      note.style.background = val > 0 ? color : "#fff";
+    }
+
+    minus.addEventListener("click", () => {
+      input.value = Math.max(0, Number(input.value) - 5);
+      updateColor(); updateSelected();
+    });
+
+    plus.addEventListener("click", () => {
+      input.value = Math.min(50, Number(input.value) + 5);
+      updateColor(); updateSelected();
+    });
+
+    note.addEventListener("input", updateSelected);
+
+    counter.appendChild(minus);
+    counter.appendChild(input);
+    counter.appendChild(plus);
+
+    card.appendChild(title);
+    card.appendChild(selection);
+    card.appendChild(note);
+    card.appendChild(counter);
+
+    container.appendChild(card);
+  });
+
+  function updateSelected() {
+    selectedBody.innerHTML = "";
+    let hasValue = false;
+    document.querySelectorAll(".frame-card").forEach(c => {
+      const qty = Number(c.querySelector("input[type='text']").value);
+      if (qty > 0) {
+        hasValue = true;
+        const note = c.querySelector("textarea").value.trim();
+        const gender = c.querySelector("input[type='radio']:checked");
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${c.querySelector(".frame-name").textContent}</td>
+                         <td>${gender ? gender.value : ""}</td>
+                         <td>${note}</td>
+                         <td>${qty}</td>`;
+        selectedBody.appendChild(row);
+      }
+    });
+    selectedTable.style.display = hasValue ? "table" : "none";
+  }
+
+  document.getElementById("saveBtn").addEventListener("click", () => {
+    let data = [];
+    document.querySelectorAll(".frame-card").forEach(c => {
+      const qty = Number(c.querySelector("input[type='text']").value);
+      if (qty > 0) {
+        const note = c.querySelector("textarea").value.trim();
+        const gender = c.querySelector("input[type='radio']:checked")?.value;
+        const name = c.querySelector(".frame-name").textContent;
+
+        data.push({
+          nomi: name,
+          turi: gender,
+          izoh: note,
+          miqdor: qty,
+          narx: null,
+          dioptriya: null,
+          rasm: null
+        });
+      }
+    });
+
+    if (data.length === 0) {
+      alert("Hech nima tanlanmagan!");
+      return;
+    }
+
+    fetch('/Linza/SaveOprava', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert("Ma'lumotlar bazaga saqlandi!");
+        window.location.href = "/Home/Index";
+      } else {
+        alert("Xatolik yuz berdi!");
+      }
+    });
+  });
+
+  document.getElementById("exitBtn").addEventListener("click", () => {
+    let hasValue = false;
+    document.querySelectorAll(".frame-card input[type='text']").forEach(inp => {
+      if (Number(inp.value) > 0) hasValue = true;
+    });
+    if (hasValue) {
+      if (confirm("Sizda kiritilgan qiymatlar mavjud. Rostdan chiqishni xohlaysizmi?")) {
+        window.location.href = '/Home/Index';
+      }
+    } else {
+      window.location.href = '/Home/Index';
+    }
+  });
+</script>
+{% endblock %}

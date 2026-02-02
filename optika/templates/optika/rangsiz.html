@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Rangsiz{% endblock %}
+
+{% block content %}
+<style>
+form {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+  max-width: 950px;
+  margin: auto;
+}
+label { font-weight: 500; margin-top: 15px; display: block; color: #444; }
+input[type="text"], select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ccd9ff;
+  border-radius: 10px;
+  margin-top: 6px;
+  font-size: 15px;
+}
+.dioptriya-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+  gap: 18px;
+  margin-top: 30px;
+}
+.dioptriya-item {
+  border: 1px solid #cddffb;
+  padding: 15px;
+  text-align: center;
+  border-radius: 12px;
+  background: #fdfdff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+  transition: transform 0.25s, background 0.25s;
+}
+.dioptriya-item:hover { transform: translateY(-3px); background: #f6faff; }
+.dioptriya-label {
+  font-weight: bold;
+  color: #0066cc;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+</style>
+
+<h2>Rangsiz Linzalar (Acuve Oasys)</h2>
+
+<form id="linzaForm">
+  {% csrf_token %}
+  <label for="type">Tur:</label>
+  <input type="text" id="type" name="type" value="Rangsiz" readonly>
+
+  <label for="brand">Brend:</label>
+  <select id="brand" name="brand">
+    <option value="Acuve Oasys">Acuve Oasys</option>
+    <option value="Biofinity">Biofinity</option>
+    <option value="Boshqa">Boshqa</option>
+  </select>
+
+  <div id="dioptriyaContainer" class="dioptriya-container"></div>
+
+  <div class="action-buttons">
+    <button type="submit" class="save-btn">Saqlash</button>
+    <button type="button" id="backBtn" class="exit-btn">Chiqish</button>
+  </div>
+</form>
+
+<table id="selectedTable">
+  <thead>
+    <tr>
+      <th>Nom</th>
+      <th>Dioptriya</th>
+      <th>Miqdor</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const container = document.getElementById("dioptriyaContainer");
+const resultTable = document.getElementById("selectedTable");
+const tbody = resultTable.querySelector("tbody");
+const brandSelect = document.getElementById("brand");
+
+const brandValues = {};
+
+function createItem(value) {
+  const item = document.createElement("div");
+  item.className = "dioptriya-item";
+
+  const label = document.createElement("div");
+  label.className = "dioptriya-label";
+  label.textContent = value;
+
+  const counter = document.createElement("div");
+  counter.className = "counter";
+
+  const minus = document.createElement("button"); minus.type="button"; minus.textContent="-";
+  const input = document.createElement("input"); input.type="number"; input.value=0; input.min=0;
+  const plus = document.createElement("button"); plus.type="button"; plus.textContent="+";
+
+  minus.addEventListener("click", () => {
+    if (Number(input.value) > 0) {
+      input.value = Number(input.value) - 2;
+      saveCurrentBrandValues();
+      updateTable();
+    }
+  });
+  plus.addEventListener("click", () => {
+    input.value = Number(input.value) + 2;
+    saveCurrentBrandValues();
+    updateTable();
+  });
+
+  counter.appendChild(minus);
+  counter.appendChild(input);
+  counter.appendChild(plus);
+  item.appendChild(label);
+  item.appendChild(counter);
+  container.appendChild(item);
+}
+
+for (let i=-0.5; i>=-4; i-=0.25) createItem(i.toFixed(2));
+for (let i=-4.5; i>=-10; i-=0.5) createItem(i.toFixed(2));
+for (let i=-11; i>=-20; i-=1) createItem(i.toFixed(2));
+
+function saveCurrentBrandValues() {
+  const prevBrand = brandSelect.dataset.currentBrand;
+  if (!prevBrand) return;
+
+  if (!brandValues[prevBrand]) brandValues[prevBrand] = {};
+  container.querySelectorAll(".dioptriya-item").forEach(item => {
+    const label = item.querySelector(".dioptriya-label").textContent.trim();
+    const input = item.querySelector("input");
+    brandValues[prevBrand][label] = Number(input.value);
+  });
+}
+
+function updateTable() {
+  tbody.innerHTML = "";
+  const allSelected = [];
+
+  const brandOrder = Object.keys(brandValues);
+  brandOrder.forEach(brand => {
+    const dioOrder = Object.keys(brandValues[brand] || {});
+    dioOrder.sort((a,b)=>parseFloat(b)-parseFloat(a));
+    dioOrder.forEach(dio => {
+      const qty = Number(brandValues[brand][dio]);
+      if (qty > 0) allSelected.push({ nomi: brand, dioptriya: dio, qty });
+    });
+  });
+
+  if (allSelected.length === 0) {
+    resultTable.style.display = "none";
+    return;
+  }
+
+  allSelected.forEach(s => {
+    tbody.innerHTML += `<tr><td>${s.nomi}</td><td>${s.dioptriya}</td><td>${s.qty}</td></tr>`;
+  });
+  resultTable.style.display = "table";
+}
+
+brandSelect.addEventListener("change", () => {
+  saveCurrentBrandValues();
+  const currentBrand = brandSelect.value;
+  brandSelect.dataset.currentBrand = currentBrand;
+
+  container.querySelectorAll(".dioptriya-item").forEach(item => {
+    const label = item.querySelector(".dioptriya-label").textContent.trim();
+    const input = item.querySelector("input");
+    input.value = brandValues[currentBrand]?.[label] || 0;
+  });
+
+  updateTable();
+});
+
+brandSelect.dataset.currentBrand = brandSelect.value;
+brandSelect.dispatchEvent(new Event('change'));
+
+document.getElementById("backBtn").addEventListener("click", () => {
+  let inputs = container.querySelectorAll(".counter input");
+  let hasValue = Array.from(inputs).some(inp => Number(inp.value) > 0);
+  if (hasValue) {
+    if (confirm("Hali ba'zi miqdorlar kiritilgan. Chiqishni xohlaysizmi?")) {
+      window.location.href = "/Home/Index";
+    }
+  } else window.location.href = "/Home/Index";
+});
+
+document.getElementById("linzaForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  saveCurrentBrandValues();
+
+  const selected = [];
+  Object.keys(brandValues).forEach(brand => {
+    Object.keys(brandValues[brand]).forEach(dio => {
+      const qty = Number(brandValues[brand][dio]);
+      if (qty > 0) selected.push({ nomi: brand, dioptriya: dio, miqdor: qty, turi: "Rangsiz", narx: null });
+    });
+  });
+
+  if (selected.length === 0) {
+    alert("Hech narsa tanlanmadi!");
+    return;
+  }
+
+  const res = await fetch("/Linza/SaveRangsiz", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": CSRF_TOKEN
+    },
+    body: JSON.stringify(selected)
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      window.location.href = data.redirectUrl;
+    } else alert(data.message || "Xatolik");
+  } else {
+    alert("Xatolik: serverga ulanishda muammo!");
+  }
+});
+</script>
+{% endblock %}

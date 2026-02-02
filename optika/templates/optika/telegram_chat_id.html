@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Telegram Chat ID{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-lg border-0 rounded-4" style="max-width:600px;margin:auto;">
+    <div class="card-header text-center bg-primary text-white rounded-top-4">
+      <h4 class="mb-0">📩 Telegram Chat ID qo‘shish</h4>
+    </div>
+
+    <div class="card-body p-4">
+      {% if messages %}
+        {% for m in messages %}
+          <div class="alert alert-info text-center" role="alert">{{ m }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form action="/Home/AddChat" method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-bold">👤 F.I.Sh:</label>
+          <input type="text" name="FullName" class="form-control" placeholder="Masalan: Jasurbek Davletov" required />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">💬 Chat ID:</label>
+          <input type="text" name="ChatId" class="form-control" placeholder="Masalan: 123456789" required />
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-success fw-semibold">➕ Qo‘shish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card mt-5 shadow-sm border-0 rounded-4">
+    <div class="card-header bg-secondary text-white rounded-top-4 text-center">
+      <h5 class="mb-0">📋 Mavjud Chat IDlar</h5>
+    </div>
+
+    <div class="card-body p-3">
+      {% if not chats %}
+        <p class="text-center text-muted mt-3">Hozircha hech qanday chat ID kiritilmagan.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle text-center">
+            <thead class="table-primary">
+              <tr>
+                <th>F.I.Sh</th>
+                <th>Chat ID</th>
+                <th>Amallar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in chats %}
+              <tr>
+                <td>{{ item.full_name }}</td>
+                <td>{{ item.chat_id }}</td>
+                <td>
+                  <form action="/Home/DeleteChat" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="id" value="{{ item.id }}" />
+                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                            onclick="return confirm('Rostdan ham o‘chirmoqchimisiz?')">🗑️</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

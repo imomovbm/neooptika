@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Profil{% endblock %}
+
+{% block content %}
+<style>
+  body { font-family: Arial; background: #f2f6fc; margin: 0; padding: 0; }
+  h2 { text-align: center; color: #004080; margin: 15px 0; }
+  .profile-info {
+    width: 95%;
+    margin: 0 auto 15px;
+    padding: 10px;
+    border-radius: 8px;
+    background: linear-gradient(to right,#eaf2ff,#f8fbff);
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .profile-info span { margin: 0 10px; font-weight: bold; }
+  .table-wrapper {
+    width: 95%;
+    margin: 0 auto 15px;
+    background: #fff;
+    border-radius: 10px;
+    overflow-x: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td {
+    padding: 6px 8px;
+    text-align: center;
+    border: 1px solid #000;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  th { background: #004080; color: #fff; }
+  tr:nth-child(even) { background: #f8fbff; }
+  tr:hover { background: #e6f0ff; }
+  td.izoh { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .action-buttons { width: 95%; margin: 10px auto; text-align: center; }
+  .action-buttons button {
+    width: 38px; height: 38px;
+    border: none; border-radius: 8px; cursor: pointer;
+    color: #fff; font-size: 16px;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin: 0 4px; transition: 0.2s;
+  }
+  .action-buttons button:hover { transform: scale(1.1); }
+  .send-btn { background: green; }
+  .delete-btn { background: red; }
+  .toggle-btn { background: dodgerblue; }
+  .hidden-row { display: none; }
+  @media(max-width:768px) {
+    h2 { font-size: 20px; }
+    th, td { font-size: 12px; padding: 4px 6px; }
+    .action-buttons button { width: 34px; height: 34px; font-size: 14px; }
+  }
+</style>
+
+<h2>Profil</h2>
+
+<div class="profile-info">
+  <span>👤 Ism Familiya: <b>{{ request.session.FullName }}</b></span>
+  <span id="branchSpan">🏢 Filial: <b>{{ request.session.Branch }}</b></span>
+</div>
+
+<div class="table-wrapper">
+  <form id="antiForgeryForm">{% csrf_token %}</form>
+
+  <table id="profileTable">
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="selectAll"></th>
+        <th>Model</th>
+        <th>Dioptriya</th>
+        <th>Izoh</th>
+        <th>Miqdor</th>
+      </tr>
+    </thead>
+
+    <tbody>
+        {% for item in profile_orders %}
+        <tr class="editable-row {% if forloop.counter0 >= 10 %}hidden-row{% endif %}"
+            data-id="{{ item.id }}"
+            data-category="{{ item.category }}"
+            data-orderid="{{ item.order_id }}">
+          <td><input type="checkbox" class="row-check"></td>
+          <td>{{ item.model }}</td>
+          <td>{{ item.dioptriya }}</td>
+          <td class="izoh" data-value="{{ item.izoh }}">{{ item.izoh }}</td>
+          <td class="miqdor" data-value="{{ item.miqdor }}">{{ item.miqdor }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="action-buttons">
+  <button type="button" id="sendBtn" class="send-btn" title="Yuborish">
+    <i class="fa-solid fa-paper-plane"></i>
+  </button>
+
+  {% if profile_orders|length > 10 %}
+  <button type="button" id="toggleBtn" class="toggle-btn" title="Ko‘proq ko‘rish">
+    <i class="fa-solid fa-eye"></i>
+  </button>
+  {% endif %}
+
+  <button type="button" id="deleteBtn" class="delete-btn" title="O‘chirish">
+    <i class="fa-solid fa-trash"></i>
+  </button>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const toggleBtn = document.getElementById("toggleBtn");
+    if (toggleBtn) {
+      let expanded = false;
+      toggleBtn.addEventListener("click", () => {
+        document.querySelectorAll("#profileTable tbody tr.hidden-row").forEach(row => {
+          row.style.display = expanded ? "none" : "table-row";
+        });
+
+        toggleBtn.innerHTML = expanded
+          ? '<i class="fa-solid fa-eye"></i>'
+          : '<i class="fa-solid fa-eye-slash"></i>';
+
+        toggleBtn.title = expanded ? "Ko‘proq ko‘rish" : "Yashirish";
+        expanded = !expanded;
+      });
+    }
+
+    document.querySelectorAll("td.izoh").forEach(td => {
+      const fullText = td.dataset.value || "";
+      td.innerText = fullText.length > 15 ? fullText.substring(0, 15) + "…" : fullText;
+    });
+  });
+
+  const tbody = document.querySelector("#profileTable tbody");
+  let activeRow = null;
+
+  function saveToServer(rowId, miqdor, izoh) {
+    const category = activeRow.dataset.category;
+    fetch('/Linza/Save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF_TOKEN
+      },
+      body: JSON.stringify({ Id: rowId, Miqdor: miqdor, Izoh: izoh, Category: category })
+    }).then(async res => {
+      const text = await res.text();
+      try {
+        const data = text ? JSON.parse(text) : {};
+        if (data.success === false) alert(data.message || "Saqlashda xatolik");
+      } catch (err) {
+        console.log("Server JSON qaytarmadi:", text);
+      }
+    }).catch(err => alert(err.message));
+  }
+
+  function closeActiveRow() {
+    if (!activeRow) return;
+
+    const miqdorTd = activeRow.querySelector(".miqdor");
+    const izohTd = activeRow.querySelector(".izoh");
+    const miqdorInput = miqdorTd.querySelector("input");
+    const izohInput = izohTd.querySelector("input");
+
+    if (miqdorInput) {
+      miqdorTd.innerText = miqdorInput.value;
+      miqdorTd.dataset.value = miqdorInput.value;
+    }
+    if (izohInput) {
+      izohTd.innerText = izohInput.value;
+      izohTd.dataset.value = izohInput.value;
+    }
+
+    saveToServer(Number(activeRow.dataset.id), Number(miqdorTd.dataset.value), izohTd.dataset.value);
+    activeRow = null;
+  }
+
+  tbody.addEventListener("click", function (e) {
+    if (e.target.closest("button") || e.target.type === "checkbox") return;
+
+    const tr = e.target.closest("tr.editable-row");
+    if (!tr) return;
+
+    if (activeRow && activeRow !== tr) closeActiveRow();
+    activeRow = tr;
+
+    const miqdorTd = tr.querySelector(".miqdor");
+    const izohTd = tr.querySelector(".izoh");
+
+    if (!miqdorTd.querySelector(".counter")) {
+      const val = Number(miqdorTd.dataset.value || miqdorTd.innerText);
+      miqdorTd.innerHTML = `<div class="counter">
+        <button type="button" class="minus">-</button>
+        <input type="number" value="${val}" min="0">
+        <button type="button" class="plus">+</button>
+      </div>`;
+
+      const input = miqdorTd.querySelector("input");
+      miqdorTd.querySelector(".minus").onclick = function (ev) {
+        ev.stopPropagation();
+        input.value = Math.max(0, Number(input.value) - 1);
+      }
+      miqdorTd.querySelector(".plus").onclick = function (ev) {
+        ev.stopPropagation();
+        input.value = Number(input.value) + 1;
+      }
+    }
+
+    if (!izohTd.querySelector("input")) {
+      const val = izohTd.dataset.value || izohTd.innerText;
+      izohTd.innerHTML = `<input type="text" value="${val}">`;
+      izohTd.querySelector("input").focus();
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    if (activeRow && !activeRow.contains(e.target)) closeActiveRow();
+  });
+
+  document.getElementById("selectAll").addEventListener("change", function () {
+    const checked = this.checked;
+    document.querySelectorAll(".row-check").forEach(cb => cb.checked = checked);
+  });
+
+  document.getElementById("deleteBtn").addEventListener("click", async () => {
+    const checked = document.querySelectorAll(".row-check:checked");
+    if (!checked.length) return alert("O‘chirish uchun kamida bitta qator tanlang!");
+    if (!confirm("Tanlangan mahsulotni o‘chirishni xohlaysizmi?")) return;
+
+    const items = Array.from(checked).map(c => {
+      const tr = c.closest("tr");
+      return {
+        Id: Number(tr.dataset.id),
+        Category: tr.dataset.category,
+        Model: tr.children[1].innerText,
+        Dioptriya: tr.children[2].innerText,
+        Izoh: tr.children[3].dataset.value,
+        Miqdor: Number(tr.children[4].innerText)
+      };
+    });
+
+    try {
+      const res = await fetch("/Linza/DeleteRows", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": CSRF_TOKEN
+        },
+        body: JSON.stringify(items)
+      });
+
+      if (!res.ok) throw new Error("Server bilan bog‘lanishda xatolik");
+      checked.forEach(c => c.closest("tr").remove());
+    } catch (err) { alert(err.message); }
+  });
+
+  document.getElementById("sendBtn").addEventListener("click", async () => {
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    if (rows.length === 0) { alert("Buyurtma mavjud emas!"); return; }
+    if (!confirm("Ma’lumotlarni adminga yuborishtan oldin tekshiring uni bekor qilish mumkin emas. yuborishni tasdiqlaysizmi?")) return;
+
+    const orders = rows.map(tr => ({
+      Id: Number(tr.dataset.id),
+      OrderId: Number(tr.dataset.orderid),
+      Category: tr.dataset.category,
+      Model: tr.children[1].innerText,
+      Dioptriya: tr.children[2].innerText,
+      Miqdor: Number(tr.children[4].innerText),
+      Izoh: tr.children[3].dataset.value
+    }));
+
+    const branch = document.getElementById("branchSpan").innerText.split(":")[1].trim();
+
+    try {
+      const pdfRes = await fetch('/Linza/DownloadPdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify(orders)
+      });
+
+      if (!pdfRes.ok) throw new Error("PDF yaratishda xatolik");
+
+      const blob = await pdfRes.blob();
+      const today = new Date();
+      const formattedDate = today.toISOString().slice(0, 10).replace(/-/g, '_');
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${branch}_${formattedDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      const res = await fetch('/Linza/MarkAsSent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify(orders.map(o => o.OrderId))
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Buyurtmalar arxivlandi.");
+        tbody.innerHTML = "";
+        document.getElementById("selectAll").checked = false;
+      } else {
+        alert(data.message || "Arxivga ko‘chirishda xatolik!");
+      }
+
+    } catch (err) { alert(err.message); }
+  });
+</script>
+{% endblock %}

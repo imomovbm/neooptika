@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Antikomp{% endblock %}
+
+{% block content %}
+<style>
+  .products-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+  }
+  .product-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+    transition: 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .product-card:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.25);
+  }
+  .product-name { font-weight: 600; font-size: 16px; margin: 6px 0; color: #003366; }
+  .product-price { font-size: 14px; color: #0066cc; margin-bottom: 8px; }
+  .note-input {
+    width: 90%;
+    margin-top: 6px;
+    font-size: 12px;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  @media (max-width: 768px) { .products-container { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 460px) { .products-container { grid-template-columns: 1fr; } }
+</style>
+
+<h2>Antikompyuterlar</h2>
+<form style="display:none;">{% csrf_token %}</form>
+
+<div id="products" class="products-container"></div>
+
+<div class="action-buttons">
+  <button class="save-btn" id="saveBtn" type="button">Saqlash</button>
+  <button class="exit-btn" id="exitBtn" type="button">Chiqish</button>
+</div>
+
+<table id="selectedTable">
+  <thead>
+    <tr>
+      <th>Mahsulot nomi</th>
+      <th>Narxi</th>
+      <th>Izoh</th>
+      <th>Miqdor</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  const products = [
+    { name: "Антикомп. Terra Pro", price: 120000 },
+    { name: "Антикомп деш. FB", price: 60000 },
+    { name: "Антикомп. FB с набором", price: 250000 },
+    { name: "Антикомпютерные", price: 90000 },
+    { name: "Mystry антик.", price: 120000 }
+  ];
+
+  const productsContainer = document.getElementById("products");
+  const table = document.getElementById("selectedTable");
+  const tableBody = table.querySelector("tbody");
+
+  products.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "product-card";
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "product-name";
+    nameDiv.textContent = p.name;
+
+    const priceDiv = document.createElement("div");
+    priceDiv.className = "product-price";
+    priceDiv.textContent = p.price.toLocaleString() + " so'm";
+
+    const counter = document.createElement("div");
+    counter.className = "counter";
+    const minus = document.createElement("button"); minus.textContent = "-";
+    const qtyInput = document.createElement("input"); qtyInput.type = "text"; qtyInput.value = 0; qtyInput.readOnly = true;
+    const plus = document.createElement("button"); plus.textContent = "+";
+
+    const noteInput = document.createElement("input");
+    noteInput.type = "text";
+    noteInput.placeholder = "Izoh kiriting...";
+    noteInput.className = "note-input";
+
+    minus.addEventListener("click", () => {
+      if (Number(qtyInput.value) > 0) qtyInput.value = Number(qtyInput.value) - 1;
+      updateTable(p.name, p.price, Number(qtyInput.value), noteInput.value);
+    });
+
+    plus.addEventListener("click", () => {
+      qtyInput.value = Number(qtyInput.value) + 1;
+      updateTable(p.name, p.price, Number(qtyInput.value), noteInput.value);
+    });
+
+    noteInput.addEventListener("input", () => {
+      updateTable(p.name, p.price, Number(qtyInput.value), noteInput.value);
+    });
+
+    counter.appendChild(minus);
+    counter.appendChild(qtyInput);
+    counter.appendChild(plus);
+
+    card.appendChild(nameDiv);
+    card.appendChild(priceDiv);
+    card.appendChild(counter);
+    card.appendChild(noteInput);
+    productsContainer.appendChild(card);
+  });
+
+  function updateTable(name, price, qty, note) {
+    let row = Array.from(tableBody.children).find(r => r.dataset.key === name);
+    if (qty > 0 || note.trim() !== "") {
+      table.style.display = "table";
+      if (!row) {
+        row = document.createElement("tr");
+        row.dataset.key = name;
+        row.innerHTML = `<td>${name}</td><td>${price.toLocaleString()}</td><td>${note}</td><td>${qty}</td>`;
+        tableBody.appendChild(row);
+      } else {
+        row.cells[2].textContent = note;
+        row.cells[3].textContent = qty;
+      }
+    } else {
+      if (row) tableBody.removeChild(row);
+      if (tableBody.children.length === 0) table.style.display = "none";
+    }
+  }
+
+  document.getElementById("exitBtn").addEventListener("click", () => {
+    const hasData = Array.from(tableBody.children).some(r => Number(r.cells[3].textContent) > 0 || r.cells[2].textContent.trim() !== "");
+    if (hasData) {
+      if (confirm("Miqdor yoki izoh kiritilgan, chiqishni xohlaysizmi?")) window.location.href = "/Home/Index";
+    } else {
+      window.location.href = "/Home/Index";
+    }
+  });
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const selected = [];
+    Array.from(tableBody.children).forEach(r => {
+      selected.push({
+        nomi: r.cells[0].textContent,
+        narx: parseFloat(r.cells[1].textContent.replace(/\./g, '').replace(",", "")),
+        izoh: r.cells[2].textContent,
+        miqdor: parseInt(r.cells[3].textContent),
+        turi: "Antikompyuter"
+      });
+    });
+
+    if (selected.length === 0) {
+      alert("Hech nima tanlanmagan!");
+      return;
+    }
+
+    const response = await fetch("/Linza/SaveAntik", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+      body: JSON.stringify(selected)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message);
+      if (data.success && data.redirectUrl) window.location.href = data.redirectUrl;
+    } else {
+      alert("Xatolik yuz berdi!");
+    }
+  });
+</script>
+{% endblock %}

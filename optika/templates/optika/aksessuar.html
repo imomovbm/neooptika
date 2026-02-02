@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% load static %}
+{% get_static_prefix as STATIC_PREFIX %}
+{% block title %}Aksessuar{% endblock %}
+
+{% block content %}
+<style>
+  h3 {
+    margin: 20px 0 10px;
+    color: #004080;
+    border-bottom: 2px solid #cddffb;
+    padding-bottom: 4px;
+    font-size: 20px;
+  }
+
+  .category-section {
+    margin-bottom: 30px;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 15px;
+  }
+
+  .drop-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .drop-img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 8px;
+  }
+
+  .drop-name {
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+    color: #222;
+    margin-bottom: 3px;
+  }
+
+  .drop-price {
+    font-size: 14px;
+    color: #444;
+    margin-bottom: 5px;
+  }
+
+  textarea {
+    width: 100%;
+    resize: none;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 13px;
+    margin-top: 6px;
+    height: 30px;
+  }
+
+  @media (max-width: 1200px) { .drop-container { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 768px) { .drop-container { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) {
+    .drop-container { grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 15px; }
+    .drop-card { width: 100%; height: 270px; max-width: 180px; margin: 0 auto; }
+  }
+</style>
+
+<h2>Aksessuarlar</h2>
+<form style="display:none;">{% csrf_token %}</form>
+
+<div id="futlyarContainer" class="category-section">
+  <h3>Futlyar</h3>
+  <div class="drop-container"></div>
+</div>
+
+<div id="salfetkaContainer" class="category-section">
+  <h3>Salfetkalar</h3>
+  <div class="drop-container"></div>
+</div>
+
+<div id="konteynerContainer" class="category-section">
+  <h3>Konteynerlar</h3>
+  <div class="drop-container"></div>
+</div>
+
+<div id="zanjirContainer" class="category-section">
+  <h3>Zanjirlar</h3>
+  <div class="drop-container"></div>
+</div>
+
+<div id="imgOverlay">
+  <img id="modalImg" src="" alt="preview">
+</div>
+
+<div class="action-buttons">
+  <button class="save-btn" id="saveBtn" type="button">Saqlash</button>
+  <button class="exit-btn" id="exitBtn" type="button">Chiqish</button>
+</div>
+
+<table id="selectedTable">
+  <thead>
+    <tr><th>Mahsulot nomi</th><th>Narxi</th><th>Izoh</th><th>Miqdor</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  const STATIC_PREFIX = "{{ STATIC_PREFIX }}";
+  const overlay = document.getElementById("imgOverlay");
+  const modalImg = document.getElementById("modalImg");
+
+  document.body.addEventListener("click", (e) => {
+    if (e.target.classList.contains("drop-img")) {
+      modalImg.src = e.target.src;
+      overlay.style.display = "flex";
+    }
+  });
+
+  overlay.addEventListener("click", () => {
+    overlay.style.display = "none";
+    modalImg.src = "";
+  });
+
+  const futlyarData = [
+    {name: "Кошелёк", price: "30.000", img: STATIC_PREFIX + "/Images/kashelok.jpg" },
+    {name: "Прозрачный", price: "20.000", img: STATIC_PREFIX + "/Images/prazrachniy.jpg" },
+    {name: "Керза", price: "10.000", img: STATIC_PREFIX + "/Images/kerza.jpg" },
+    {name: "Дорогой", price: "60.000", img: STATIC_PREFIX + "/Images/daragoy.jpg" },
+    {name: "Замок дешёвый", price: "20.000", img: STATIC_PREFIX + "/Images/zam_desh.jpg" },
+    {name: "Замок дорогой", price: "25.000", img: STATIC_PREFIX + "/Images/zam_daragoy.jpg" },
+    {name: "Кнопка", price: "25.000", img: STATIC_PREFIX + "/Images/knopka.jpg" },
+    {name: "Металл", price: "40.000", img: STATIC_PREFIX + "/Images/metal.jpg" },
+    {name: "Пластик", price: "20.000", img: STATIC_PREFIX + "/Images/plastik.jpg" },
+    {name: "Футляр 2х", price: "90.000", img: STATIC_PREFIX + "/Images/2x.jpg" }
+  ];
+
+  const salfetkaData = [
+    {name: "FB+Nikitana", price: "10.000", img: STATIC_PREFIX + "/Images/fb_salfetka.jpg" },
+    {name: "Bagozza", price: "15.000", img: STATIC_PREFIX + "/Images/bagozza.jpg" },
+    {name: "Большой", price: "30.000", img: STATIC_PREFIX + "/Images/platochek_b.jpg" },
+    {name: "Спрей", price: "30.000", img: STATIC_PREFIX + "/Images/sprey.jpg" },
+    {name: "Bagozza спрей", price: "30.000", img: STATIC_PREFIX + "/Images/sprey_bg.jpg" }
+  ];
+
+  const konteynerData = [
+    {name: "Окулидер пластер", price: "5.000", img: STATIC_PREFIX + "/Images/okulider.jpg" },
+    {name: "Аксессуар пинцет", price: "10.000", img: STATIC_PREFIX + "/Images/pinset.jpg" },
+    {name: "Контейнер дорогой", price: "70.000", img: STATIC_PREFIX + "/Images/konteyner_daragoy.jpg" },
+    {name: "Контейнер средний", price: "35.000", img: STATIC_PREFIX + "/Images/konteyner_sredniy.jpg" }
+  ];
+
+  const zanjirData = [
+    {name: "Цепочка дорогой", price: "45.000", img: STATIC_PREFIX + "/Images/sepochka_daragoy.jpg" },
+    {name: "Цепочка средний", price: "35.000", img: STATIC_PREFIX + "/Images/sepochka.jpg" },
+    {name: "Шнурок детский", price: "10.000", img: STATIC_PREFIX + "/Images/shnurok_detskiy.jpg" },
+    {name: "Шнурок средний", price: "5.000", img: STATIC_PREFIX + "/Images/shnurok.jpg" }
+  ];
+
+  function createCards(containerId, data){
+    const container = document.querySelector(`#${containerId} .drop-container`);
+    if(!container) return;
+    container.innerHTML = "";
+    data.forEach(d=>{
+      const card = document.createElement("div");
+      card.className = "drop-card";
+      card.innerHTML = `
+        <img class="drop-img" src="${d.img}" alt="">
+        <div class="drop-name">${d.name}</div>
+        <div class="drop-price">${d.price}</div>
+        <div class="counter">
+          <button type="button">-</button>
+          <input type="text" value="0">
+          <button type="button">+</button>
+        </div>
+        <textarea placeholder="Izoh..."></textarea>
+      `;
+      const minus = card.querySelector("button:first-child");
+      const plus = card.querySelector("button:last-child");
+      const input = card.querySelector("input");
+      const note = card.querySelector("textarea");
+
+      minus.addEventListener("click", ()=>{ input.value = Math.max(0, Number(input.value)-5); updateSelected(); });
+      plus.addEventListener("click", ()=>{ input.value = Number(input.value)+5; updateSelected(); });
+      input.addEventListener("input", ()=>{ input.value = input.value.replace(/[^0-9]/g,'')||0; updateSelected(); });
+      note.addEventListener("input", updateSelected);
+
+      container.appendChild(card);
+    });
+  }
+
+  createCards("futlyarContainer", futlyarData);
+  createCards("salfetkaContainer", salfetkaData);
+  createCards("konteynerContainer", konteynerData);
+  createCards("zanjirContainer", zanjirData);
+
+  function updateSelected(){
+    const rows = [];
+    document.querySelectorAll(".drop-card").forEach(c=>{
+      const name = c.querySelector(".drop-name").innerText;
+      const price = c.querySelector(".drop-price").innerText;
+      const qty = parseInt(c.querySelector("input").value) || 0;
+      const note = c.querySelector("textarea").value.trim();
+      if(qty>0 || note){
+        rows.push(`<tr><td>${name}</td><td>${price}</td><td>${note}</td><td>${qty}</td></tr>`);
+      }
+    });
+    const table = document.getElementById("selectedTable");
+    table.querySelector("tbody").innerHTML = rows.join("");
+    table.style.display = rows.length ? "table" : "none";
+  }
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const selected = [];
+    document.querySelectorAll(".drop-card").forEach(c => {
+      const name = c.querySelector(".drop-name").innerText;
+      const price = parseFloat(c.querySelector(".drop-price").innerText.replace(/\./g, '').replace(",", ".")) || 0;
+      const qty = parseInt(c.querySelector("input").value) || 0;
+      const note = c.querySelector("textarea").value.trim();
+      const img = c.querySelector(".drop-img").src;
+
+      if (qty > 0) {
+        selected.push({
+          nomi: name,
+          turi: "Aksessuar",
+          miqdor: qty,
+          narx: price,
+          izoh: note,
+          rasm: img
+        });
+      }
+    });
+
+    if (selected.length === 0) {
+      alert("Hech narsa tanlanmagan!");
+      return;
+    }
+
+    const response = await fetch("/Linza/SaveAksessuar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+      body: JSON.stringify(selected)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message);
+      if (data.success && data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      }
+    } else {
+      alert("Xatolik yuz berdi!");
+    }
+  });
+
+  document.getElementById("exitBtn").addEventListener("click", ()=>{
+    const any = document.querySelectorAll(".drop-card").length && document.querySelector("#selectedTable tbody").innerHTML.trim() !== "";
+    if(any){
+      if(confirm("Ba'zi mahsulotlar tanlangan. Chiqishni xohlaysizmi?")) window.location.href = "/Home/Index";
+    } else window.location.href = "/Home/Index";
+  });
+</script>
+{% endblock %}

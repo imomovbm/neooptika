@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Takliflar{% endblock %}
+
+{% block content %}
+<form id="antiForgeryForm">{% csrf_token %}</form>
+
+<div style="max-width:700px; margin:20px auto; background:#fff; border-radius:12px; padding:15px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+  <h2 style="text-align:center; color:#004080; margin-bottom:15px;">Talab va Takliflaringiz</h2>
+
+  <div style="margin-bottom:12px;">
+    <label style="color:#333; font-size:14px;">Ism Familiya:</label>
+    <input type="text" value="{{ request.session.FullName }}" readonly
+           style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; background:#f8fbff;" />
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <label style="color:#333; font-size:14px;">Telefon raqam (ixtiyoriy):</label>
+    <input id="phone" type="text" placeholder="+998 ** *** ** **"
+           style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;" />
+  </div>
+
+  <div style="margin-bottom:12px;">
+    <label style="color:#333; font-size:14px;">Xabaringiz:</label>
+    <textarea id="message" rows="5" placeholder="Taklif yoki talabingizni yozing..."
+              style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; resize:vertical;"></textarea>
+    <small id="charCount" style="display:block; margin-top:5px; color:#666;">0 / 500</small>
+  </div>
+
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button id="sendBtn" type="button"
+            style="background:#004080; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;">
+      <i class="fa-solid fa-paper-plane"></i> Yuborish
+    </button>
+    <button id="clearBtn" type="button"
+            style="background:#ccc; border:none; padding:10px 16px; border-radius:8px; cursor:pointer;">
+      Tozalash
+    </button>
+    <div id="feedbackMsg" style="margin-left:12px; display:none;"></div>
+  </div>
+</div>
+
+<script>
+  const message = document.getElementById("message");
+  const charCount = document.getElementById("charCount");
+  const sendBtn = document.getElementById("sendBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const feedbackMsg = document.getElementById("feedbackMsg");
+  const phone = document.getElementById("phone");
+
+  const MAX = 500;
+  message.addEventListener("input", () => {
+    charCount.textContent = `${message.value.length} / ${MAX}`;
+    charCount.style.color = message.value.length > MAX ? "red" : "#666";
+    sendBtn.disabled = message.value.length > MAX;
+  });
+
+  clearBtn.onclick = () => {
+    phone.value = "";
+    message.value = "";
+    charCount.textContent = `0 / ${MAX}`;
+    feedbackMsg.style.display = "none";
+  };
+
+  sendBtn.onclick = async () => {
+    if (!message.value.trim()) {
+      alert("❌ Xabar matni bo‘sh bo‘lmasligi kerak");
+      return;
+    }
+
+    const payload = { phone: phone.value.trim(), message: message.value.trim() };
+
+    try {
+      sendBtn.disabled = true;
+      sendBtn.innerText = "Yuborilmoqda...";
+
+      const res = await fetch('/Home/SendFeedback', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": CSRF_TOKEN
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        alert("✅ Taklifingiz muvaffaqiyatli yuborildi, rahmat!");
+        location.reload();
+      } else {
+        alert(data.message || "❌ Xatolik yuz berdi");
+      }
+    } catch (e) {
+      alert("❌ Tarmoq xatosi");
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Yuborish';
+    }
+  };
+</script>
+{% endblock %}

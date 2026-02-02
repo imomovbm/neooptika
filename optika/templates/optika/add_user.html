@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Foydalanuvchilar{% endblock %}
+
+{% block content %}
+<div style="max-width:1100px; margin:40px auto; background:linear-gradient(145deg,#ffffff,#f3f6fc); border-radius:16px; padding:30px; box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+  <h2 style="text-align:center; color:#003366; font-size:28px; margin-bottom:25px; font-weight:700;">
+    👥 Foydalanuvchilar ro‘yxati
+  </h2>
+
+  {% if messages %}
+    {% for m in messages %}
+      <div style="background:#f8fbff; padding:10px; border-radius:8px; text-align:center; margin-bottom:10px;">
+        {{ m }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if not users %}
+    <p style="text-align:center; color:#777; font-size:16px;">Foydalanuvchilar topilmadi</p>
+  {% else %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:20px;">
+      {% for u in users %}
+      <div class="user-card" style="background:white; border-radius:14px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.08); transition:all 0.3s;">
+        <div class="view-mode">
+          <h4 style="color:#004080; font-weight:700; margin-bottom:10px;">👤 {{ u.full_name }}</h4>
+          <p style="margin:5px 0;"><strong>📞 Telefon:</strong> {{ u.phone }}</p>
+          <p style="margin:5px 0;"><strong>🆔 Login:</strong> {{ u.user_id }}</p>
+          <p style="margin:5px 0;"><strong>🔑 Parol:</strong> {{ u.parol }}</p>
+          <p style="margin:5px 0;"><strong>🎭 Rol:</strong> {{ u.role }}</p>
+
+          <div style="display:flex; justify-content:center; gap:10px; margin-top:15px;">
+            <button type="button" class="editBtn"
+              style="background:#1976d2; color:#fff; padding:6px 12px; border-radius:8px; font-size:14px; font-weight:600;">
+              ✏️
+            </button>
+
+            <a href="/Home/DeleteUser?id={{ u.id }}"
+              onclick="return confirm('Haqiqatan ham o‘chirmoqchimisiz?')"
+              style="background:#d32f2f; color:#fff; padding:6px 12px; border-radius:8px; text-decoration:none; font-size:14px; font-weight:600;">
+              🗑️
+            </a>
+          </div>
+        </div>
+
+        <div class="edit-mode" style="display:none; margin-top:15px;">
+          <form action="/Home/EditUser" method="post" style="display:flex; flex-direction:column; gap:10px;">
+            {% csrf_token %}
+            <input type="hidden" name="Id" value="{{ u.id }}" />
+            <input name="FullName" value="{{ u.full_name }}" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input name="Phone" value="{{ u.phone }}" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input name="UserId" value="{{ u.user_id }}" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input name="Parol" value="" placeholder="Yangi parol (ixtiyoriy)" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+
+            <select name="Role" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+              <option value="User" {% if u.role|lower == "user" %}selected{% endif %}>User</option>
+              <option value="Admin" {% if u.role|lower == "admin" %}selected{% endif %}>Admin</option>
+            </select>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+              <button type="submit" style="background:#004080; color:#fff; padding:6px 12px; border-radius:6px; font-weight:600;">💾 Saqlash</button>
+              <button type="button" class="cancelBtn" style="background:#777; color:#fff; padding:6px 12px; border-radius:6px; font-weight:600;">❌ Bekor qilish</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div style="text-align:center; margin-top:30px;">
+    <button id="addUserBtn" style="background:#1976d2; color:#fff; padding:10px 20px; border-radius:8px; font-weight:700; font-size:16px;">
+      ➕ Yangi foydalanuvchi qo‘shish
+    </button>
+  </div>
+
+  <div id="addUserForm" style="display:none; max-width:600px; margin:20px auto; background:white; border-radius:12px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+    <form action="/Home/AddUser" method="post" style="display:flex; flex-direction:column; gap:10px;">
+      {% csrf_token %}
+      <input name="FullName" placeholder="Ism Familiya" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <input name="Phone" placeholder="Telefon" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <input name="UserId" placeholder="Login" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <input name="Parol" placeholder="Parol" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+      <select name="Role" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+        <option value="User" selected>User</option>
+        <option value="Admin">Admin</option>
+      </select>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+        <button type="submit" style="background:#004080; color:#fff; padding:6px 12px; border-radius:6px; font-weight:600;">💾 Saqlash</button>
+        <button type="button" id="cancelAddBtn" style="background:#777; color:#fff; padding:6px 12px; border-radius:6px; font-weight:600;">❌ Bekor qilish</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .user-card:hover { transform: translateY(-4px); box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
+</style>
+
+<script>
+  document.querySelectorAll(".editBtn").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const card = btn.closest(".user-card");
+      card.querySelector(".view-mode").style.display = "none";
+      card.querySelector(".edit-mode").style.display = "block";
+    });
+  });
+
+  document.querySelectorAll(".cancelBtn").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const card = btn.closest(".user-card");
+      card.querySelector(".edit-mode").style.display = "none";
+      card.querySelector(".view-mode").style.display = "block";
+    });
+  });
+
+  document.getElementById("addUserBtn").addEventListener("click", function () {
+    document.getElementById("addUserForm").style.display = "block";
+    this.style.display = "none";
+    window.scrollTo({ top: document.getElementById("addUserForm").offsetTop, behavior: 'smooth' });
+  });
+
+  document.getElementById("cancelAddBtn").addEventListener("click", function () {
+    document.getElementById("addUserForm").style.display = "none";
+    document.getElementById("addUserBtn").style.display = "inline-block";
+  });
+</script>
+{% endblock %}

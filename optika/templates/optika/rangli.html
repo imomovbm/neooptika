@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% load static %}
+{% get_static_prefix as STATIC_PREFIX %}
+{% block title %}Rangli{% endblock %}
+
+{% block content %}
+<style>
+  .color-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  .color-card {
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    background: #fdfdff;
+    cursor: pointer;
+    transition: 0.25s;
+    border: 1px solid #000;
+  }
+  .color-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .color-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    object-fit: contain;
+    border: 1px solid #ccc;
+  }
+
+  .color-name { font-weight: 600; margin-bottom: 2px; }
+  .color-code { font-size: 14px; color: #000; font-weight:600; margin-bottom: 5px; }
+</style>
+
+<h2>Rangli Linzalar</h2>
+
+<div style="margin-bottom:20px;">
+  <label for="colorFilter"><b>Filtr:</b></label>
+  <select id="colorFilter">
+    <option value="all">Barchasi</option>
+    <option value="Black">Black</option>
+    <option value="Gray">Gray</option>
+    <option value="Brown">Brown</option>
+    <option value="Blue">Blue</option>
+    <option value="Green">Green</option>
+    <option value="Yellow">Yellow</option>
+    <option value="Red">Red</option>
+    <option value="Violet">Violet</option>
+    <option value="IRIS">IRIS</option>
+  </select>
+</div>
+
+<form id="rangliForm">
+  {% csrf_token %}
+  <div class="color-container" id="colorContainer"></div>
+
+  <div class="action-buttons">
+    <button type="button" class="exit-btn" id="backBtn">Chiqish</button>
+    <button type="submit" class="save-btn">Saqlash</button>
+  </div>
+</form>
+
+<div id="imgOverlay">
+  <img id="modalImg" src="" alt="preview">
+</div>
+
+<table id="selectedTable">
+  <thead>
+    <tr>
+      <th>Rang</th>
+      <th>Kodi</th>
+      <th>Miqdor</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  const STATIC_PREFIX = "{{ STATIC_PREFIX }}";
+
+  const colors = [
+    { name: "Black", code: "A106", img: STATIC_PREFIX + "/Images/Dox/Black/A106_black.jpg" },
+    { name: "Black", code: "B11", img: STATIC_PREFIX + "/Images/Dox/Black/B11_black.jfif" },
+    { name: "Black", code: "CiK2020", img: STATIC_PREFIX + "/Images/Dox/Black/CiK2020_black.jfif" },
+    { name: "Black", code: "Dark", img: STATIC_PREFIX + "/Images/Dox/Black/DARK_black.jfif" },
+    { name: "Black", code: "K1003", img: STATIC_PREFIX + "/Images/Dox/Black/K1003_black.jpg" },
+    { name: "Black", code: "MD11", img: STATIC_PREFIX + "/Images/Dox/Black/MD11_black.jpg" },
+    { name: "Black", code: "MIST", img: STATIC_PREFIX + "/Images/Dox/Black/MIST_black.jpg" },
+    { name: "Black", code: "SCLERA", img: STATIC_PREFIX + "/Images/Dox/Black/SCLERA_black.jpg" },
+    { name: "Black", code: "SMOKY", img: STATIC_PREFIX + "/Images/Dox/Black/SMOKY_black.jpg" },
+
+    { name: "Gray", code: "A2010", img: STATIC_PREFIX + "/Images/Dox/Gray/A2010_gray.jpg" },
+    { name: "Gray", code: "BT2", img: STATIC_PREFIX + "/Images/Dox/Gray/BT2_gray.jpg" },
+    { name: "Gray", code: "CiA2010", img: STATIC_PREFIX + "/Images/Dox/Gray/CiA2010_gray.jpg" },
+    { name: "Gray", code: "CL21", img: STATIC_PREFIX + "/Images/Dox/Gray/CL21_gray.jpg" },
+    { name: "Gray", code: "EDG L", img: STATIC_PREFIX + "/Images/Dox/Gray/EDGL_gray.jfif" },
+    { name: "Gray", code: "INK", img: STATIC_PREFIX + "/Images/Dox/Gray/INK_gray.jfif" },
+    { name: "Gray", code: "JS12", img: STATIC_PREFIX + "/Images/Dox/Gray/JS12_gray.jpg" },
+    { name: "Gray", code: "JS22", img: STATIC_PREFIX + "/Images/Dox/Gray/JS22_gray.jpg" },
+    { name: "Gray", code: "K2010", img: STATIC_PREFIX + "/Images/Dox/Gray/K2010_gray.jpg" },
+    { name: "Gray", code: "K2013", img: STATIC_PREFIX + "/Images/Dox/Gray/K2013_gray.jpg" },
+    { name: "Gray", code: "K3005A", img: STATIC_PREFIX + "/Images/Dox/Gray/K3005A_gray.jpg" },
+
+    { name: "Brown", code: "CL21", img: STATIC_PREFIX + "/Images/Dox/Brown/CL21_brown.jpg" },
+    { name: "Brown", code: "EDG", img: STATIC_PREFIX + "/Images/Dox/Brown/EDG_brown.jpg" },
+    { name: "Brown", code: "JS96 D", img: STATIC_PREFIX + "/Images/Dox/Brown/JS96D_brawn.jpg" },
+    { name: "Brown", code: "JS123", img: STATIC_PREFIX + "/Images/Dox/Brown/JS123_brown.jpg" },
+    { name: "Brown", code: "K2010", img: STATIC_PREFIX + "/Images/Dox/Brown/K2010_brown.jpg" },
+    { name: "Brown", code: "K2012", img: STATIC_PREFIX + "/Images/Dox/Brown/K2012_brown.jpg" },
+    { name: "Brown", code: "K2020 Choco", img: STATIC_PREFIX + "/Images/Dox/Brown/K2020_choco.jpg" },
+    { name: "Brown", code: "MD11 Choco", img: STATIC_PREFIX + "/Images/Dox/Brown/MD11_choco.jpg" },
+    { name: "Brown", code: "MIST Choco", img: STATIC_PREFIX + "/Images/Dox/Brown/MIST_choco.jpg" },
+    { name: "Brown", code: "Natural", img: STATIC_PREFIX + "/Images/Dox/Brown/NATURAL_brown.jpg" },
+    { name: "Brown", code: "RUST", img: STATIC_PREFIX + "/Images/Dox/Brown/RUST_brown.jpg" },
+    { name: "Brown", code: "SMOKY", img: STATIC_PREFIX + "/Images/Dox/Brown/SMOKY_choco.jpg" },
+
+    { name: "Blue", code: "A2011", img: STATIC_PREFIX + "/Images/Dox/Blue/A2011_blue.jpg" },
+    { name: "Blue", code: "CL21 Sky", img: STATIC_PREFIX + "/Images/Dox/Blue/CL21_sky.jpg" },
+    { name: "Blue", code: "EDG", img: STATIC_PREFIX + "/Images/Dox/Blue/EDG_blue.jpg" },
+    { name: "Blue", code: "K2010", img: STATIC_PREFIX + "/Images/Dox/Blue/K2010_blue.jpg" },
+
+    { name: "Green", code: "CL21", img: STATIC_PREFIX + "/Images/Dox/Green/CL21_green.jpg" },
+    { name: "Green", code: "DAILY", img: STATIC_PREFIX + "/Images/Dox/Green/DAILY_green.jpg" },
+    { name: "Green", code: "EDG", img: STATIC_PREFIX + "/Images/Dox/Green/EDG_green.jpg" },
+    { name: "Green", code: "K2010", img: STATIC_PREFIX + "/Images/Dox/Green/K2010_green.jpg" },
+    { name: "Green", code: "K2015", img: STATIC_PREFIX + "/Images/Dox/Green/K2015_green.jpg" },
+
+    { name: "Yellow", code: "EDG", img: STATIC_PREFIX + "/Images/Dox/EDG_yellow.jpg" },
+    { name: "Red", code: "F09-2W", img: STATIC_PREFIX + "/Images/Dox/F09-2w_red.jpg" },
+    { name: "Violet", code: "K2010", img: STATIC_PREFIX + "/Images/Dox/K2010_violet.jpg" },
+
+    { name: "IRIS", code: "03", img: STATIC_PREFIX + "/Images/Dox/IRIS03.jpg" },
+    { name: "IRIS", code: "05", img: STATIC_PREFIX + "/Images/Dox/IRIS05.jpg" },
+  ];
+
+  const container = document.getElementById("colorContainer");
+  const table = document.getElementById("selectedTable");
+  const tbody = table.querySelector("tbody");
+
+  const overlay = document.getElementById("imgOverlay");
+  const modalImg = document.getElementById("modalImg");
+
+  container.addEventListener("click", (e) => {
+    if (e.target.classList.contains("color-img")) {
+      modalImg.src = e.target.src;
+      overlay.style.display = "flex";
+    }
+  });
+
+  overlay.addEventListener("click", () => {
+    overlay.style.display = "none";
+    modalImg.src = "";
+  });
+
+  document.getElementById("colorFilter").addEventListener("change", (e) => {
+    const selected = e.target.value;
+    document.querySelectorAll(".color-card").forEach(card => {
+      const name = card.querySelector(".color-name").textContent;
+      card.style.display = (selected === "all" || name === selected) ? "block" : "none";
+    });
+  });
+
+  function updateTable() {
+    tbody.innerHTML = "";
+    const selected = [];
+
+    document.querySelectorAll(".color-card").forEach(c => {
+      const qty = Number(c.querySelector("input").value);
+      if (qty > 0) selected.push({
+        name: c.querySelector(".color-name").textContent,
+        code: c.getAttribute("data-color"),
+        qty
+      });
+    });
+
+    if (selected.length === 0) {
+      table.style.display = "none";
+      return;
+    }
+
+    selected.forEach(s => {
+      const row = `<tr>
+        <td><span class='color-box' style='background:${s.code}'></span>${s.name}</td>
+        <td>${s.code}</td>
+        <td>${s.qty}</td>
+      </tr>`;
+      tbody.insertAdjacentHTML("beforeend", row);
+    });
+
+    table.style.display = "table";
+  }
+
+  colors.forEach(c => {
+    const card = document.createElement("div");
+    card.className = "color-card";
+    card.setAttribute("data-color", c.code);
+
+    const img = document.createElement("img");
+    img.className = "color-img";
+    img.src = c.img;
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "color-name";
+    nameDiv.textContent = c.name;
+
+    const codeDiv = document.createElement("div");
+    codeDiv.className = "color-code";
+    codeDiv.textContent = c.code;
+
+    const counter = document.createElement("div");
+    counter.className = "counter";
+
+    const minus = document.createElement("button");
+    minus.textContent = "-";
+    minus.type = "button";
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.value = 0;
+    input.min = 0;
+
+    const plus = document.createElement("button");
+    plus.textContent = "+";
+    plus.type = "button";
+
+    minus.addEventListener("click", () => {
+      if (Number(input.value) > 0) {
+        input.value = Number(input.value) - 1;
+        updateTable();
+      }
+    });
+
+    plus.addEventListener("click", () => {
+      input.value = Number(input.value) + 1;
+      updateTable();
+    });
+
+    input.addEventListener("input", updateTable);
+
+    counter.appendChild(minus);
+    counter.appendChild(input);
+    counter.appendChild(plus);
+
+    card.appendChild(img);
+    card.appendChild(nameDiv);
+    card.appendChild(codeDiv);
+    card.appendChild(counter);
+
+    container.appendChild(card);
+  });
+
+  document.getElementById("backBtn").addEventListener("click", () => {
+    let inputs = container.querySelectorAll(".counter input");
+    let hasValue = Array.from(inputs).some(inp => Number(inp.value) > 0);
+
+    if (hasValue) {
+      if (confirm("Hali ba'zi miqdorlar kiritilgan. Haqiqatan ham chiqmoqchimisiz?")) {
+        window.location.href = "/Home/Index";
+      }
+    } else {
+      window.location.href = "/Home/Index";
+    }
+  });
+
+  document.getElementById("rangliForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const selected = [];
+    document.querySelectorAll(".color-card").forEach(c => {
+      const qty = Number(c.querySelector("input").value);
+      if (qty > 0) {
+        const name = c.querySelector(".color-name")?.textContent.trim() || "";
+        const code = c.getAttribute("data-color") || "";
+        const img = c.querySelector("img") ? c.querySelector("img").src : "";
+        selected.push({
+          nomi: `${name} ${code}`,
+          miqdor: qty,
+          rasm: img
+        });
+      }
+    });
+
+    if (selected.length === 0) {
+      alert("Hech qanday linza tanlanmadi!");
+      return;
+    }
+
+    const response = await fetch("/Linza/SaveRangli", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": CSRF_TOKEN
+      },
+      body: JSON.stringify(selected)
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        alert(data.message);
+        window.location.href = data.redirectUrl;
+      } else {
+        alert(data.message || "Xatolik yuz berdi!");
+      }
+    } else {
+      alert("Server bilan bog‘lanishda xatolik!");
+    }
+  });
+</script>
+{% endblock %}

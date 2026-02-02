@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kirish</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #ffffff, #a3d8ff, #cba6f7);
+  background-size: 400% 400%;
+  animation: gradientMove 15s ease infinite;
+}
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.login-container {
+  width: 100%;
+  max-width: 360px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  padding: 35px 30px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  text-align: center;
+  animation: fadeIn 1s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+h2 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 30px;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.15);
+}
+.input-group { position: relative; margin-bottom: 20px; }
+.input-group i {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #ff4e50;
+  font-size: 14px;
+}
+input, select {
+  width: 100%;
+  padding: 12px 12px 12px 36px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  color: #222;
+  outline: none;
+  transition: 0.3s;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.8);
+}
+input:focus, select:focus {
+  border-color: #ff4e50;
+  box-shadow: 0 0 10px rgba(255,78,80,0.4);
+  background: rgba(255,255,255,0.95);
+}
+select {
+  appearance: none;
+  background: rgba(255,255,255,0.8) url('data:image/svg+xml;utf8,<svg fill="%23ff4e50" height="12" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 10px center;
+  background-size: 12px;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff4e50, #f9d423);
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover { background: linear-gradient(135deg, #f9d423, #ff4e50); }
+.error {
+  color: #d9534f;
+  font-size: 13px;
+  margin-top: 6px;
+  display: none;
+  text-align: left;
+}
+@media (max-width: 480px) {
+  .login-container { padding: 30px 20px; }
+  h2 { font-size: 22px; }
+  input, select { padding: 11px 11px 11px 34px; font-size: 14px; }
+  button { padding: 11px; font-size: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <h2>Kirish</h2>
+
+  <!-- We still include csrf token so cookie + middleware are happy -->
+  <form id="loginForm" method="post" action="/Home/Login">
+    {% csrf_token %}
+    <div class="input-group">
+      <i class="fas fa-id-card"></i>
+      <input type="text" id="userId" name="userId" placeholder="ID" required>
+    </div>
+
+    <div class="input-group">
+      <i class="fas fa-lock"></i>
+      <input type="password" id="password" name="password" placeholder="Parol" required>
+    </div>
+
+    <div class="input-group">
+      <i class="fas fa-building"></i>
+      <select id="branch" name="branch" required>
+        <option value="">Filialni tanlang</option>
+        <option value="Neo Podval">Neo Podval</option>
+        <option value="Fabricio">Fabricio</option>
+        <option value="Fabricio Vogzal">Fabricio Vogzal</option>
+        <option value="City Center">City Center</option>
+        <option value="Aka Shuxrat">Aka Shuxrat</option>
+        <option value="Karvon">Karvon</option>
+        <option value="Obl Balnitsa">Obl Balnitsa</option>
+        <option value="Himchan">Himchan</option>
+        <option value="Jasnur">Jasnur</option>
+      </select>
+    </div>
+
+    <div id="errorMsg" class="error">ID, parol yoki filial noto‘g‘ri!</div>
+    <button type="submit">Kirish</button>
+  </form>
+</div>
+
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const CSRF_TOKEN = getCookie('csrftoken');
+
+const form = document.getElementById("loginForm");
+const errorMsg = document.getElementById("errorMsg");
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const userId = document.getElementById("userId").value.trim();
+  const branch = document.getElementById("branch").value;
+  const password = document.getElementById("password").value.trim();
+
+  if (!userId || !branch || !password) {
+    errorMsg.style.display = "block";
+    return;
+  }
+
+  fetch('/Home/Login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': CSRF_TOKEN
+    },
+    body: `userId=${encodeURIComponent(userId)}&password=${encodeURIComponent(password)}&branch=${encodeURIComponent(branch)}`
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) window.location.href = '/Home/Index';
+    else { errorMsg.textContent = data.message || "Xatolik"; errorMsg.style.display = "block"; }
+  })
+  .catch(() => { errorMsg.textContent = "Xatolik yuz berdi!"; errorMsg.style.display = "block"; });
+});
+</script>
+</body>
+</html>

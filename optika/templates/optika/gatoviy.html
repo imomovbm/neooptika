@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% load static %}
+{% get_static_prefix as STATIC_PREFIX %}
+{% block title %}Gatoviy{% endblock %}
+
+{% block content %}
+<style>
+  .glasses-container { display: grid; grid-template-columns: repeat(10,1fr); gap: 10px; margin-top: 15px; }
+  .glass-card {
+    border-radius: 10px; padding: 8px; text-align: center;
+    border: 1px solid #ccc; cursor: pointer; transition: 0.2s;
+    background: #fdfdff; margin:0 5px 0 5px;
+  }
+  .glass-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .glass-card img { width: 80px; height: 80px; object-fit: contain; display: block; margin: 0 auto; border: 1px solid #000; }
+  .glass-name { font-weight: 600; font-size: 12px; }
+  .divider { height: 2px; background: #28a745; margin: 20px 0; border-radius: 1px; }
+  .diop-container { display: grid; grid-template-columns: repeat(8,1fr); gap: 8px; margin-top: 10px; }
+  .diop-card { border-radius: 8px; padding: 6px; text-align: center; border: 1px solid #ccc; background: #e6ffe6; }
+  .dioptriya { font-size: 14px; margin-bottom: 6px; font-weight: 600; }
+  #imgOverlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 9999;
+  }
+  #imgOverlay img { max-width: 90%; max-height: 90%; border-radius: 10px; }
+  @media (max-width:1024px) { .glasses-container { grid-template-columns: repeat(5,1fr); } .diop-container { grid-template-columns: repeat(4,1fr); } }
+  @media (max-width:768px) { .glasses-container { grid-template-columns: repeat(4,1fr); } .diop-container { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width:480px) { .glasses-container { grid-template-columns: repeat(2,1fr); } .diop-container { grid-template-columns: repeat(2,1fr); } }
+</style>
+
+<h2>Gatoviy Achkilar</h2>
+<form style="display:none;">{% csrf_token %}</form>
+
+<div id="brands" class="glasses-container"></div>
+<div class="divider"></div>
+<div id="dioptriyas" class="diop-container"></div>
+
+<div style="margin-top:15px;">
+  <label>Izoh: </label>
+  <input id="commentInput" type="text" placeholder="Izoh kiriting..." style="width:100%;" />
+</div>
+
+<div id="imgOverlay">
+  <img id="modalImg" src="" alt="preview">
+</div>
+
+<div class="action-buttons">
+  <button class="save-btn" id="saveBtn" type="button">Saqlash</button>
+  <button class="exit-btn" id="exitBtn" type="button">Chiqish</button>
+</div>
+
+<table id="selectedTable" style="display:none; margin-top:20px; border-collapse:collapse; width:100%;">
+  <thead>
+    <tr style="background:#ddd;">
+      <th>Mahsulot nomi</th>
+      <th>Dioptriya</th>
+      <th>Izoh</th>
+      <th>Miqdor</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  const STATIC_PREFIX = "{{ STATIC_PREFIX }}";
+
+  const overlay = document.getElementById("imgOverlay");
+  const modalImg = document.getElementById("modalImg");
+
+  document.body.addEventListener("click", (e) => {
+    if (e.target.classList.contains("drop-img")) {
+      if (overlay.style.display === "flex" && modalImg.src === e.target.src) {
+        overlay.style.display = "none"; modalImg.src = "";
+      } else {
+        modalImg.src = e.target.src;
+        overlay.style.display = "flex";
+      }
+    }
+  });
+
+  overlay.addEventListener("click", () => {
+    overlay.style.display = "none";
+    modalImg.src = "";
+  });
+
+  const models = [
+    { name: "5024,9263ст", img: STATIC_PREFIX + "/Images/5024.jpg" },
+    { name: "D008", img: STATIC_PREFIX + "/Images/d008.jpg" },
+    { name: "Fabricio YR*.", img: STATIC_PREFIX + "/Images/fbyr.jpg" },
+    { name: "VS 1801, 1802", img: STATIC_PREFIX + "/Images/photo_12_2025-09-24_00-43-47.jpg" },
+    { name: "FB 707", img: STATIC_PREFIX + "/Images/fb707.jpg" },
+    { name: "FB гот 23134s", img: STATIC_PREFIX + "/Images/.jpg" },
+    { name: "Fb1802 с футл.", img: STATIC_PREFIX + "/Images/fb1802.jpg" },
+    { name: "Gusto", img: STATIC_PREFIX + "/Images/gusto.jpg" },
+    { name: "Jacopo", img: STATIC_PREFIX + "/Images/jacopo.jpg" },
+    { name: "R022", img: STATIC_PREFIX + "/Images/r022.jpg" },
+    { name: "Ralph,FD1901,HQ5233", img: STATIC_PREFIX + "/Images/.jpg" },
+    { name: "T O с футляром", img: STATIC_PREFIX + "/Images/.jpg" },
+    { name: "TR 5005", img: STATIC_PREFIX + "/Images/tr5005.jpg" },
+    { name: "ZE 89", img: STATIC_PREFIX + "/Images/ze89.jpg" },
+    { name: "Готовый деш.", img: STATIC_PREFIX + "/Images/gotdesh.jpg" },
+    { name: "Готовые до -10", img: STATIC_PREFIX + "/Images/gotminus10.jpg" },
+    { name: "Готовые до -20", img: STATIC_PREFIX + "/Images/.jpg" },
+    { name: "Тонированные", img: STATIC_PREFIX + "/Images/.jpg" },
+    { name: "Тренажорный", img: STATIC_PREFIX + "/Images/trinajor.jpg" },
+    { name: "Глаукома", img: STATIC_PREFIX + "/Images/glaukoma.jpg" }
+  ];
+
+  const brandsContainer = document.getElementById("brands");
+  const diopContainer = document.getElementById("dioptriyas");
+  const table = document.getElementById("selectedTable");
+  const tableBody = table.querySelector("tbody");
+  const commentInput = document.getElementById("commentInput");
+
+  models.forEach((m, index) => {
+    const card = document.createElement("div");
+    card.className = "glass-card";
+
+    const img = document.createElement("img");
+    img.src = m.img;
+    img.classList.add("drop-img");
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "glass-name";
+    nameDiv.textContent = m.name;
+
+    card.appendChild(img);
+    card.appendChild(nameDiv);
+    brandsContainer.appendChild(card);
+
+    card.addEventListener("click", () => showDioptriyas(index));
+  });
+
+  function showDioptriyas(modelIndex) {
+    diopContainer.innerHTML = "";
+    if (modelIndex < 15) {
+      for (let d = 0.5; d <= 4; d += 0.25) createDiopCard(models[modelIndex].name, `+${d.toFixed(2)}`);
+    } else if (modelIndex === 15) {
+      for (let d = -1; d >= -10; d -= 0.5) createDiopCard(models[modelIndex].name, d.toFixed(1));
+    } else if (modelIndex === 16) {
+      for (let d = -11; d >= -20; d--) createDiopCard(models[modelIndex].name, d.toString());
+    } else if (modelIndex >= 17 && modelIndex <= 19) {
+      createDiopCard(models[modelIndex].name, "-");
+    }
+  }
+
+  function createDiopCard(modelName, diopVal) {
+    const card = document.createElement("div");
+    card.className = "diop-card";
+
+    const modelDiv = document.createElement("div");
+    modelDiv.className = "model-name";
+    modelDiv.textContent = modelName;
+
+    const diop = document.createElement("div");
+    diop.className = "dioptriya";
+    diop.textContent = diopVal;
+
+    const counter = document.createElement("div");
+    counter.className = "counter";
+    const minus = document.createElement("button"); minus.textContent = "-";
+    const input = document.createElement("input"); input.type = "text"; input.value = 0; input.readOnly = true;
+    const plus = document.createElement("button"); plus.textContent = "+";
+
+    minus.addEventListener("click", () => {
+      if (Number(input.value) > 0) input.value--;
+      updateTable(modelName, diopVal, Number(input.value));
+    });
+
+    plus.addEventListener("click", () => {
+      input.value++;
+      let comment = commentInput.value.trim();
+      updateTable(modelName, diopVal, Number(input.value), comment);
+      commentInput.value = "";
+    });
+
+    counter.appendChild(minus);
+    counter.appendChild(input);
+    counter.appendChild(plus);
+
+    card.appendChild(modelDiv);
+    card.appendChild(diop);
+    card.appendChild(counter);
+
+    diopContainer.appendChild(card);
+  }
+
+  function updateTable(model, diop, value, commentVal = "") {
+    let key = `${model}-${diop}`;
+    let row = Array.from(tableBody.children).find(r => r.dataset.key === key);
+
+    if (value > 0 || commentVal) {
+      table.style.display = "table";
+      if (!row) {
+        row = document.createElement("tr");
+        row.dataset.key = key;
+        row.innerHTML = `<td>${model}</td><td>${diop}</td><td>${commentVal}</td><td>${value}</td>`;
+        tableBody.appendChild(row);
+      } else {
+        if (commentVal !== "") row.cells[2].textContent = commentVal;
+        row.cells[3].textContent = value;
+      }
+    } else {
+      if (row) tableBody.removeChild(row);
+      if (tableBody.children.length === 0) table.style.display = "none";
+    }
+
+    let rows = Array.from(tableBody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      let modelA = a.cells[0].textContent.trim();
+      let modelB = b.cells[0].textContent.trim();
+      if (modelA < modelB) return -1;
+      if (modelA > modelB) return 1;
+      let diopA = parseFloat(a.cells[1].textContent.replace("+", ""));
+      let diopB = parseFloat(b.cells[1].textContent.replace("+", ""));
+      return diopA - diopB;
+    });
+    tableBody.innerHTML = "";
+    rows.forEach(r => tableBody.appendChild(r));
+  }
+
+  document.getElementById("exitBtn").addEventListener("click", () => {
+    if (tableBody.children.length > 0) {
+      if (confirm("Ba'zi qiymatlar kiritilgan. Chiqishni xohlaysizmi?")) window.location.href = '/Home/Index';
+    } else window.location.href = '/Home/Index';
+  });
+
+  document.getElementById("saveBtn").addEventListener("click", () => {
+    let data = [];
+    Array.from(tableBody.children).forEach(r => {
+      data.push({
+        nomi: r.cells[0].textContent,
+        dioptriya: r.cells[1].textContent,
+        izoh: r.cells[2].textContent,
+        miqdor: parseInt(r.cells[3].textContent),
+        rasm: null,
+        turi: "Gatoviy",
+        narx: null
+      });
+    });
+
+    if (data.length === 0) {
+      alert("Hech qanday qiymat kiritilmadi!");
+      return;
+    }
+
+    fetch('/Linza/SaveGot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify(data)
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          alert("Ma'lumotlar saqlandi!");
+          window.location.href = "/Home/Index";
+        } else {
+          alert("Xatolik yuz berdi!");
+        }
+      });
+  });
+</script>
+{% endblock %}

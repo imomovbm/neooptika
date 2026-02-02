@@ -1,0 +1,451 @@
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+
+
+h2 {
+    text-align: center;
+    color: #005bb5;
+    font-weight: 600;
+    margin-bottom: 25px;
+    font-size: 26px;
+}
+
+
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #ffffff, #a3d8ff, #cba6f7);
+    display: flex;
+    flex-direction: column;
+}
+
+
+
+
+#imgOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+    #imgOverlay img {
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 10px;
+        box-shadow: 0 0 20px #000;
+    }
+
+
+
+
+.counter {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+
+    .counter input {
+        width: 50px;
+        text-align: center;
+        font-size: 16px;
+        padding: 4px;
+        border: 2px solid black;
+        border-radius: 6px;
+        -moz-appearance: textfield;
+    }
+
+        .counter input::-webkit-outer-spin-button,
+        .counter input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+    .counter button {
+        width: 25px;
+        height: 25px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #e0edff;
+        color: #0066cc;
+        font-weight: bold;
+    }
+
+        .counter button:hover {
+            background: #c9deff;
+        }
+
+.color-box {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    border-radius: 4px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+
+/* --- Pastki tugmalar --- */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    margin-bottom: 25px;
+}
+
+    .action-buttons button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #fff;
+        transition: 0.2s;
+    }
+
+.save-btn {
+    background: #003366; /* To‘q ko‘k */
+}
+
+    .save-btn:hover {
+        background: #002244;
+    }
+
+.exit-btn {
+    background: #dc3545; /* Qizil */
+}
+
+    .exit-btn:hover {
+        background: #a71d2a;
+    }
+/* --- Jadval dizayni --- */
+#selectedTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: none;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+    #selectedTable th,
+    #selectedTable td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+        font-size: 16px;
+    }
+
+    #selectedTable th {
+        background: linear-gradient(90deg, #28a745, #6edc82);
+        color: #fff;
+        font-weight: 700;
+        font-size: 17px;
+    }
+
+    #selectedTable tbody tr:nth-child(even) {
+        background: #e6ffe6;
+    }
+
+    #selectedTable tbody tr:nth-child(odd) {
+        background: #d9ffd9;
+    }
+
+    #selectedTable tbody tr:hover {
+        background: #b3ffb3;
+    }
+
+    /* --- Faqat "Miqdor" ustuni uchun --- */
+    #selectedTable td:nth-child(4) {
+        background: #ffe0b2;
+        font-size: 15px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    #selectedTable td:nth-child(3) {
+        word-wrap: break-word;
+        white-space: normal;
+        max-width: 200px;
+        text-align: left;
+    }
+
+/* --- Responsivlik --- */
+@media (max-width: 1200px) {
+    #selectedTable th, #selectedTable td {
+        font-size: 16px;
+        padding: 8px;
+    }
+
+        #selectedTable td:nth-child(4) {
+            font-size: 16px;
+        }
+}
+
+@media (max-width: 768px) {
+    #selectedTable th, #selectedTable td {
+        font-size: 14px;
+        padding: 6px;
+    }
+
+        #selectedTable td:nth-child(4) {
+            font-size: 14px;
+        }
+
+        #selectedTable td:nth-child(3) {
+            max-width: 150px;
+        }
+}
+
+@media (max-width: 480px) {
+    #selectedTable th, #selectedTable td {
+        font-size: 12px;
+        padding: 4px;
+    }
+
+        #selectedTable td:nth-child(4) {
+            font-size: 13px;
+        }
+
+        #selectedTable td:nth-child(3) {
+            max-width: 100px;
+        }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.drop-card {
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 16px;
+    text-align: center;
+    padding: 12px;
+    transition: 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 260px;
+    margin:10px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+    border: 0.5px solid rgba(0,0,0,0.5);
+}
+
+    .drop-card:hover {
+        background: rgba(255, 255, 255, 0.95);
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 12px 25px rgba(0,0,0,0.25);
+    }
+
+
+
+
+
+
+
+
+/* 1-kategoriya uchun fon rasm + stil (Kontakt Linza) */
+#kontaktLinza {
+    background: url('https://da4e1j5r7gw87.cloudfront.net/wp-content/uploads/sites/5482/2025/01/Digital-vision-eye-care-concept.-Doctor-using-technology-for-eye-test-vision-checking-eyesight-Eye-clinic-appointment.jpg') center/cover no-repeat;
+    color: white;
+}
+
+    #kontaktLinza::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        background: rgba(0,0,0,0.45);
+        z-index: 1;
+    }
+
+    #kontaktLinza span {
+        position: relative;
+        z-index: 2;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+/* 2-kategoriya uchun fon rasm + stil (Kaplya) */
+#kaplyaCard {
+    background: url('https://thumbs.dreamstime.com/b/close-up-blue-eye-drop-water-surrounded-blurry-white-background-370701502.jpg') center/cover no-repeat;
+    color: white;
+}
+
+    #kaplyaCard::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        background: rgba(0,0,0,0.45);
+        z-index: 1;
+    }
+
+    #kaplyaCard span {
+        position: relative;
+        z-index: 2;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+/* 3-kategoriya (Aksessuarlar) */
+#aksessuarCard {
+    background: url('https://m.media-amazon.com/images/I/71aMLYkmbYL._AC_SL1500_.jpg') center/cover no-repeat;
+    color: white;
+}
+
+    #aksessuarCard::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        background: rgba(0,0,0,0.45);
+        z-index: 1;
+    }
+
+    #aksessuarCard span {
+        position: relative;
+        z-index: 2;
+        font-size: 22px;
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+/* 4-kategoriya (Opravalar) */
+#opravaCard {
+    background: url('https://www.pel-eyewear.com/hubfs/Blog%20Post%20Images/August%20Blog%20Post%20Images/design_oxygen_a_photo_of_a_pair_of_acetate_glasses_on_a_wooden_aa761d3a_0c83_4203_a32f_8517f130a03d_1.webp') center/cover no-repeat;
+    color: white;
+}
+
+    #opravaCard::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        background: rgba(0,0,0,0.45);
+        z-index: 1;
+    }
+
+    #opravaCard span {
+        position: relative;
+        z-index: 2;
+        font-size: 22px;
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+/* 5-kategoriya (Gatoviylar) */
+#gatoviyCard {
+    background: url('https://cdn.thewirecutter.com/wp-content/uploads/2019/12/online-prescription-glasses-2019-2x1-lowres4571.jpg?width=2048&quality=75&crop=2:1&auto=webp') center/cover no-repeat;
+    color: white;
+}
+
+    #gatoviyCard::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        background: rgba(0,0,0,0.45);
+        z-index: 1;
+    }
+
+    #gatoviyCard span {
+        position: relative;
+        z-index: 2;
+        font-size: 22px;
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+/* 6-kategoriya (Antikompyuter) */
+#antikompCard {
+    background: url('https://cdn.shopify.com/s/files/1/0456/7983/7343/files/ocushield-blue-light-blocking-glasses-christmas-2-300x150.jpg') center/cover no-repeat;
+    color: white;
+}
+
+    #antikompCard::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        background: rgba(0,0,0,0.45);
+        z-index: 1;
+    }
+
+    #antikompCard span {
+        position: relative;
+        z-index: 2;
+        font-size: 22px;
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
