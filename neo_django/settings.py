@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,10 +21,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!dq&_5m%=6jaw=2@qq7p7fx$adi51xifr%hqdpxuqe1)^co(*k'
-
+SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['neooptika.uz','www.neooptika.uz']
 
@@ -117,5 +117,4 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-TELEGRAM_BOT_TOKEN = "7605699975:AAEch4aeEjo3kWSfaVNuRn-WuYKGYEPLFfU"
-
+TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN')
