@@ -9,7 +9,7 @@ db.sqlite3
 *.log
 media/
 staticfiles/
-
+static/
 # Virtualenv
 venv/
 env/
