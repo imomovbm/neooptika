@@ -26,7 +26,7 @@
           <h4 style="color:#004080; font-weight:700; margin-bottom:10px;">👤 {{ u.full_name }}</h4>
           <p style="margin:5px 0;"><strong>📞 Telefon:</strong> {{ u.phone }}</p>
           <p style="margin:5px 0;"><strong>🆔 Login:</strong> {{ u.user_id }}</p>
-          <p style="margin:5px 0;"><strong>🔑 Parol:</strong> {{ u.parol }}</p>
+          <p style="margin:5px 0;"><strong>🔑 Parol:</strong> ****</p>
           <p style="margin:5px 0;"><strong>🎭 Rol:</strong> {{ u.role }}</p>
 
           <div style="display:flex; justify-content:center; gap:10px; margin-top:15px;">
@@ -47,9 +47,9 @@
           <form action="/Home/EditUser" method="post" style="display:flex; flex-direction:column; gap:10px;">
             {% csrf_token %}
             <input type="hidden" name="Id" value="{{ u.id }}" />
-            <input name="FullName" value="{{ u.full_name }}" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
-            <input name="Phone" value="{{ u.phone }}" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
-            <input name="UserId" value="{{ u.user_id }}" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input name="FullName" value="{{ u.full_name }}" placeholder="FIO" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input name="Phone" value="{{ u.phone }}" placeholder="Tel raqam" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
+            <input name="UserId" value="{{ u.user_id }}" placeholder="Login" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
             <input name="Parol" value="" placeholder="Yangi parol (ixtiyoriy)" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
 
             <select name="Role" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
