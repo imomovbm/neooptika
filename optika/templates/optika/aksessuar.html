@@ -260,8 +260,8 @@
   document.getElementById("exitBtn").addEventListener("click", ()=>{
     const any = document.querySelectorAll(".drop-card").length && document.querySelector("#selectedTable tbody").innerHTML.trim() !== "";
     if(any){
-      if(confirm("Ba'zi mahsulotlar tanlangan. Chiqishni xohlaysizmi?")) window.location.href = "{% url 'optika:index' %}";
-    } else window.location.href = "{% url 'optika:index' %}";
+      if(confirm("Ba'zi mahsulotlar tanlangan. Chiqishni xohlaysizmi?")) window.location.href = "/Home/Index";
+    } else window.location.href = "/Home/Index";
   });
 </script>
 {% endblock %}

@@ -262,10 +262,10 @@
 
     if (hasValue) {
       if (confirm("Hali ba'zi miqdorlar kiritilgan. Haqiqatan ham chiqmoqchimisiz?")) {
-        window.location.href = "{% url 'optika:index' %}";
+        window.location.href = "/Home/Index";
       }
     } else {
-      window.location.href = "{% url 'optika:index' %}";
+      window.location.href = "/Home/Index";
     }
   });
 

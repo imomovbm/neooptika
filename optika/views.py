@@ -12,7 +12,6 @@ from django.http import (
     HttpResponse,
     JsonResponse,
 )
-from django.urls import reverse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -282,7 +281,7 @@ def login_view(request: HttpRequest):
 
 def logout_view(request: HttpRequest):
     request.session.flush()
-    return redirect("optika:login")
+    return redirect("login")
 
 
 @ensure_csrf_cookie
@@ -537,7 +536,7 @@ def save_rangsiz(request: HttpRequest):
                 rasm=rasm,
             )
 
-    return JsonResponse({"success": True, "message": "Rangsiz linzalar saqlandi", "redirectUrl": reverse("optika:index")})
+    return JsonResponse({"success": True, "message": "Rangsiz linzalar saqlandi", "redirectUrl": "/Home/Index"})
 
 
 @require_POST
@@ -574,7 +573,7 @@ def save_rangli(request: HttpRequest):
                 turi=item.get("turi"),
             )
 
-    return JsonResponse({"success": True, "message": "Rangli linzalar saqlandi", "redirectUrl": reverse("optika:index")})
+    return JsonResponse({"success": True, "message": "Rangli linzalar saqlandi", "redirectUrl": "/Home/Index"})
 
 
 @require_POST
@@ -612,7 +611,7 @@ def save_kapliya(request: HttpRequest):
                 izoh=item.get("izoh") or "",
             )
 
-    return JsonResponse({"success": True, "message": "Kaplyalar saqlandi", "redirectUrl": reverse("optika:index")})
+    return JsonResponse({"success": True, "message": "Kaplyalar saqlandi", "redirectUrl": "/Home/Index"})
 
 
 @require_POST
@@ -653,7 +652,7 @@ def save_aksessuar(request: HttpRequest):
                 rasm=rasm,
             )
 
-    return JsonResponse({"success": True, "message": "Aksessuarlar saqlandi", "redirectUrl": reverse("optika:index")})
+    return JsonResponse({"success": True, "message": "Aksessuarlar saqlandi", "redirectUrl": "/Home/Index"})
 
 
 @require_POST
@@ -692,7 +691,7 @@ def save_antik(request: HttpRequest):
                 turi=turi or None,
             )
 
-    return JsonResponse({"success": True, "message": "Antikompyuterlar saqlandi", "redirectUrl": reverse("optika:index")})
+    return JsonResponse({"success": True, "message": "Antikompyuterlar saqlandi", "redirectUrl": "/Home/Index"})
 
 
 @require_POST
@@ -735,7 +734,7 @@ def save_gatoviy(request: HttpRequest):
                 },
             )
 
-    return JsonResponse({"success": True, "message": "Gatoviylar saqlandi", "redirectUrl": reverse("optika:index")})
+    return JsonResponse({"success": True, "message": "Gatoviylar saqlandi", "redirectUrl": "/Home/Index"})
 
 
 @require_POST
@@ -773,7 +772,7 @@ def save_oprava(request: HttpRequest):
                 izoh=izoh,
             )
 
-    return JsonResponse({"success": True, "message": "Opravalar saqlandi", "redirectUrl": reverse("optika:index")})
+    return JsonResponse({"success": True, "message": "Opravalar saqlandi", "redirectUrl": "/Home/Index"})
 
 
 # -----------------------------

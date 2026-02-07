@@ -185,9 +185,9 @@ document.getElementById("backBtn").addEventListener("click", () => {
   let hasValue = Array.from(inputs).some(inp => Number(inp.value) > 0);
   if (hasValue) {
     if (confirm("Hali ba'zi miqdorlar kiritilgan. Chiqishni xohlaysizmi?")) {
-      window.location.href = "{% url 'optika:index' %}";
+      window.location.href = "/Home/Index";
     }
-  } else window.location.href = "{% url 'optika:index' %}";
+  } else window.location.href = "/Home/Index";
 });
 
 document.getElementById("linzaForm").addEventListener("submit", async (e) => {

@@ -5,11 +5,11 @@ app_name='optika'
 
 urlpatterns = [
     # Home
-    path("login/", views.login_view, name="login"),
-    path("", views.index_view, name="index"),
-    path("logout/", views.logout_view, name="logout"),
+    path("Home/Login", views.login_view, name="login"),
+    path("Home/Index", views.index_view, name="index"),
+    path("Home/Logout", views.logout_view, name="logout"),
 
-    path("profile/", views.profile_view, name="profile"),
+    path("Home/Profile", views.profile_view, name="profile"),
     path("Home/Archive", views.archive_view, name="archive"),
     path("Home/DownloadPdf", views.download_archive_pdf, name="download_archive_pdf"),
 

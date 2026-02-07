@@ -27,7 +27,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['neooptika.uz','www.neooptika.uz', '127.0.0.1']
 
-APPEND_SLASH=True
+
 # Application definition
 
 INSTALLED_APPS = [

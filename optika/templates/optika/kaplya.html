@@ -187,10 +187,10 @@
   document.getElementById("homeBtn").addEventListener("click", () => {
     if (tbody.innerHTML.trim() !== "") {
       if (confirm("Chiqishni xohlaysizmi? O‘zgarishlar saqlanmaydi.")) {
-        window.location.href = "{% url 'optika:index' %}";
+        window.location.href = "/Home/Index";
       }
     } else {
-      window.location.href = "{% url 'optika:index' %}";
+      window.location.href = "/Home/Index";
     }
   });
 

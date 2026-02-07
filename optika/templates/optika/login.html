@@ -109,7 +109,7 @@ button:hover { background: linear-gradient(135deg, #f9d423, #ff4e50); }
   <h2>Kirish</h2>
 
   <!-- We still include csrf token so cookie + middleware are happy -->
-  <form id="loginForm" method="post" action="{% url 'optika:login' %}">
+  <form id="loginForm" method="post" action="/Home/Login">
     {% csrf_token %}
     <div class="input-group">
       <i class="fas fa-id-card"></i>
@@ -174,7 +174,7 @@ form.addEventListener("submit", (e) => {
     return;
   }
 
-  fetch("{% url 'optika:login' %}", {
+  fetch('/Home/Login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -184,7 +184,7 @@ form.addEventListener("submit", (e) => {
   })
   .then(res => res.json())
   .then(data => {
-    if (data.success) window.location.href = "{% url 'optika:index' %}";
+    if (data.success) window.location.href = '/Home/Index';
     else { errorMsg.textContent = data.message || "Xatolik"; errorMsg.style.display = "block"; }
   })
   .catch(() => { errorMsg.textContent = "Xatolik yuz berdi!"; errorMsg.style.display = "block"; });
