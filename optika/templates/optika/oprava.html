@@ -263,7 +263,7 @@
     .then(res => {
       if (res.success) {
         alert("Ma'lumotlar bazaga saqlandi!");
-        window.location.href = "/Home/Index";
+        window.location.href = "{% url 'optika:inde' %}";
       } else {
         alert("Xatolik yuz berdi!");
       }

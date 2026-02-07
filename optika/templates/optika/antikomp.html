@@ -147,9 +147,9 @@
   document.getElementById("exitBtn").addEventListener("click", () => {
     const hasData = Array.from(tableBody.children).some(r => Number(r.cells[3].textContent) > 0 || r.cells[2].textContent.trim() !== "");
     if (hasData) {
-      if (confirm("Miqdor yoki izoh kiritilgan, chiqishni xohlaysizmi?")) window.location.href = "/Home/Index";
+      if (confirm("Miqdor yoki izoh kiritilgan, chiqishni xohlaysizmi?")) window.location.href = "{% url 'optika:index' %}";
     } else {
-      window.location.href = "/Home/Index";
+      window.location.href = "{% url 'optika:index' %}";
     }
   });
 

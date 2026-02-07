@@ -87,16 +87,16 @@
             <li class="nav-item"><a class="nav-link" href="/Home/AddUser">Foydalanuvchilar</a></li>
             <li class="nav-item"><a class="nav-link" href="/Home/TelegramChatId">Telegram Chat Id</a></li>
             <li class="nav-item">
-              <a class="nav-link logout-link" href="/Home/Logout"
+              <a class="nav-link logout-link" href="{% url 'optika:logout' %}"
                  onclick="return confirm('Rostdan ham chiqmoqchimisiz?')">Chiqish</a>
             </li>
           {% else %}
             <li class="nav-item"><a class="nav-link" href="/Home/Index">Bosh sahifa</a></li>
-            <li class="nav-item"><a class="nav-link" href="/Home/Profile">Profil</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'optika:profile' %}">Profil</a></li>
             <li class="nav-item"><a class="nav-link" href="/Home/Archive">Arxiv</a></li>
             <li class="nav-item"><a class="nav-link" href="/Home/Feedback">Takliflar</a></li>
             <li class="nav-item">
-              <a class="nav-link logout-link" href="/Home/Logout"
+              <a class="nav-link logout-link" href="{% url 'optika:logout' %}"
                  onclick="return confirm('Rostdan ham chiqmoqchimisiz?')">Chiqish</a>
             </li>
           {% endif %}
