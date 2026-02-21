@@ -86,6 +86,11 @@ const brandSelect = document.getElementById("brand");
 
 const brandValues = {};
 
+function setBrandValue(brand, dioLabel, value) {
+  if (!brandValues[brand]) brandValues[brand] = {};
+  brandValues[brand][dioLabel] = value;
+}
+
 function createItem(value) {
   const item = document.createElement("div");
   item.className = "dioptriya-item";
@@ -97,26 +102,47 @@ function createItem(value) {
   const counter = document.createElement("div");
   counter.className = "counter";
 
-  const minus = document.createElement("button"); minus.type="button"; minus.textContent="-";
-  const input = document.createElement("input"); input.type="number"; input.value=0; input.min=0;
-  const plus = document.createElement("button"); plus.type="button"; plus.textContent="+";
+  const minus = document.createElement("button");
+  minus.type = "button";
+  minus.textContent = "-";
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.value = 0;
+  input.min = 0;
+
+  const plus = document.createElement("button");
+  plus.type = "button";
+  plus.textContent = "+";
+
+  const onValueChange = () => {
+    const currentBrand = brandSelect.value;
+    const dioLabel = label.textContent.trim();
+    const qty = Math.max(0, Number(input.value) || 0);
+
+    input.value = qty; // normalize (no NaN, no negative)
+    setBrandValue(currentBrand, dioLabel, qty);
+    updateTable();
+  };
+
 
   minus.addEventListener("click", () => {
-    if (Number(input.value) > 0) {
-      input.value = Number(input.value) - 2;
-      saveCurrentBrandValues();
-      updateTable();
-    }
+    const next = Math.max(0, (Number(input.value) || 0) - 2);
+    input.value = next;
+    onValueChange();
   });
+
   plus.addEventListener("click", () => {
-    input.value = Number(input.value) + 2;
-    saveCurrentBrandValues();
-    updateTable();
+    input.value = (Number(input.value) || 0) + 2;
+    onValueChange();
   });
+ 
+  input.addEventListener("input", onValueChange);
 
   counter.appendChild(minus);
   counter.appendChild(input);
   counter.appendChild(plus);
+
   item.appendChild(label);
   item.appendChild(counter);
   container.appendChild(item);
@@ -138,12 +164,12 @@ function saveCurrentBrandValues() {
   });
 }
 
+
 function updateTable() {
   tbody.innerHTML = "";
   const allSelected = [];
 
-  const brandOrder = Object.keys(brandValues);
-  brandOrder.forEach(brand => {
+  Object.keys(brandValues).forEach(brand => {
     const dioOrder = Object.keys(brandValues[brand] || {});
     dioOrder.sort((a,b)=>parseFloat(b)-parseFloat(a));
     dioOrder.forEach(dio => {
@@ -158,7 +184,9 @@ function updateTable() {
   }
 
   allSelected.forEach(s => {
-    tbody.innerHTML += `<tr><td>${s.nomi}</td><td>${s.dioptriya}</td><td>${s.qty}</td></tr>`;
+    tbody.insertAdjacentHTML("beforeend",
+      `<tr><td>${s.nomi}</td><td>${s.dioptriya}</td><td>${s.qty}</td></tr>`
+    );
   });
   resultTable.style.display = "table";
 }
