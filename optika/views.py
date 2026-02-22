@@ -36,7 +36,7 @@ from .models import (
 
 def _session_user_or_redirect(request: HttpRequest):
     if not request.session.get("UserId"):
-        return redirect("login")
+        return redirect("optika:login")
     return None
 
 
@@ -281,7 +281,7 @@ def login_view(request: HttpRequest):
 
 def logout_view(request: HttpRequest):
     request.session.flush()
-    return redirect("login")
+    return redirect("optika:login")
 
 
 @ensure_csrf_cookie
