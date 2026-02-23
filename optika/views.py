@@ -29,6 +29,56 @@ from .models import (
     FeedBack, TelegramChat
 )
 
+from reportlab.lib.colors import HexColor, white
+from datetime import datetime
+import math
+
+# ─── colours matching QuestPDF / MudBlazor equivalents ───────────────────────
+BLUE_DARKEN2   = HexColor("#1565C0")
+HEADER_BG      = HexColor("#E0F7FA")   # #E0F7FA — same as order PDF
+GREY_LIGHTEN3  = HexColor("#F5F5F5")   # Colors.Grey.Lighten3
+BLUE_LIGHTEN5  = HexColor("#E3F2FD")   # Colors.Blue.Lighten5
+GREEN_LIGHTEN5 = HexColor("#E8F5E9")   # Colors.Green.Lighten5
+ORANGE_LIGHTEN4= HexColor("#FFE0B2")   # Colors.Orange.Lighten4
+# Cycles exactly as the C# array does
+FILIAL_COLORS = [GREY_LIGHTEN3, BLUE_LIGHTEN5, GREEN_LIGHTEN5, ORANGE_LIGHTEN4]
+
+ROW_H    = 18   # row height in points (~18pt ≈ compact table row)
+FONT_SZ  = 8   # body font size
+HDR_SZ   = 10   # header font size
+
+def _draw_cell(
+    c: canvas.Canvas,
+    x: float, y: float,
+    w: float, h: float,
+    text: str,
+    font: str,
+    font_size: float,
+    bg: HexColor = None,
+    text_color: HexColor = None,
+    bold: bool = False,
+):
+    """Draw one table cell with optional background fill, border, and text."""
+    # Fill background
+    if bg is not None:
+        c.setFillColor(bg)
+        c.rect(x, y - h, w, h, stroke=0, fill=1)
+
+    # Border
+    c.setStrokeColor(HexColor("#000000"))
+    c.rect(x, y - h, w, h, stroke=1, fill=0)
+
+    # Text
+    c.setFillColor(text_color if text_color else HexColor("#000000"))
+    # Use bold font variant if available and requested
+    active_font = (font + "-Bold") if bold else font
+    try:
+        c.setFont(active_font, font_size)
+    except:
+        c.setFont(font, font_size)
+
+    max_chars = max(5, int(w / (font_size * 0.55)))  # approximate char fit
+    c.drawString(x + 3, y - h + 5, _truncate(text, max_chars))
 
 # -----------------------------
 # Session helpers
@@ -126,74 +176,90 @@ def _truncate(text: str, max_len: int) -> str:
 
 
 def _build_table_pdf(
-    title: str,
-    header_lines: List[str],
-    columns: List[Tuple[str, int]],  # (name, width)
+    full_name: str,
+    branch: str,
+    columns: List[Tuple[str, float]],   # (name, relative_weight)
     rows: List[List[str]],
+    page_size: int = 36,
+    title_line1: str = "Buyurtmalar ro'yxati",   # NEW — configurable title
+    header_date: datetime = None,                 # NEW — use archive date if provided
 ) -> bytes:
     font = _try_register_cyrillic_font()
-    buf = io.BytesIO()
+    buf  = io.BytesIO()
+    now  = header_date or datetime.now()          # archive date OR current time
+
+    page_w, page_h = A4
+    margin = 28.35   # 10 mm — matches page.Margin(10)
+
+    total_weight = sum(w for _, w in columns)
+    available_w  = page_w - 2 * margin
+    col_widths   = [available_w * w / total_weight for _, w in columns]
+    col_names    = [n for n, _ in columns]
+
+    total_pages = max(1, math.ceil(len(rows) / page_size))
     c = canvas.Canvas(buf, pagesize=A4)
-    width, height = A4
 
-    margin_x = 40
-    y = height - 40
+    DATA_SZ = 12    # matches C# FontSize(12) on data spans
+    HDR_SZ  = 12    # matches C# FontSize(12) on header spans
 
-    def new_page():
-        nonlocal y
-        c.showPage()
-        c.setFont(font, 10)
-        y = height - 40
+    def draw_page_header(page_num: int):
+        y = page_h - margin
 
-    # Title
-    c.setFont(font, 14)
-    c.drawString(margin_x, y, title)
-    y -= 22
-
-    # Header lines
-    c.setFont(font, 10)
-    for line in header_lines:
-        c.drawString(margin_x, y, line)
+        # "Buyurtmalar ro'yxati" or "Buyurtma arxivi" — blue, bold, FontSize 12
+        try:
+            c.setFont(font + "-Bold", 12)
+        except Exception:
+            c.setFont(font, 12)
+        c.setFillColor(BLUE_DARKEN2)
+        c.drawString(margin, y, title_line1)
         y -= 14
-    y -= 8
+        c.drawString(margin, y, f"{full_name} ({branch})")
 
-    # Table header
-    col_x = margin_x
-    c.setFont(font, 10)
-    c.setLineWidth(1)
-
-    def draw_table_header():
-        nonlocal y
-        # If not enough space, go new page and redraw header
-        if y < 80:
-            new_page()
-            # redraw title? not necessary; but redraw table header
+        # Date right-aligned on same top line (archive date or now)
         c.setFont(font, 10)
-        x = margin_x
-        c.rect(margin_x, y - 18, sum(w for _, w in columns), 18, stroke=1, fill=0)
-        for name, w in columns:
-            c.drawString(x + 3, y - 13, _truncate(name, 30))
+        c.setFillColor(HexColor("#000000"))
+        c.drawRightString(page_w - margin, page_h - margin,
+                          now.strftime("%d/%m/%Y %H:%M"))
+
+        # "Sahifa X / Y"
+        y -= 13
+        c.drawString(margin, y, f"Sahifa {page_num} / {total_pages}")
+        y -= 10
+        return y
+
+    def draw_table_header(y: float) -> float:
+        x = margin
+        for name, w in zip(col_names, col_widths):
+            _draw_cell(c, x, y, w, ROW_H, name, font, HDR_SZ,
+                       bg=HEADER_BG, bold=True)
             x += w
-        y -= 18
+        return y - ROW_H
 
-    draw_table_header()
+    def draw_footer():
+        c.setFont(font, 10)
+        c.setFillColor(HexColor("#000000"))
+        c.drawRightString(page_w - margin, margin,
+                          f"© {datetime.now().year} Optika Loyihasi")
 
-    # Rows
-    for r in rows:
-        if y < 60:
-            new_page()
-            draw_table_header()
+    for page_idx in range(total_pages):
+        if page_idx > 0:
+            c.showPage()
 
-        x = margin_x
-        row_h = 18
-        c.rect(margin_x, y - row_h, sum(w for _, w in columns), row_h, stroke=1, fill=0)
-        for idx, (_, w) in enumerate(columns):
-            cell_text = r[idx] if idx < len(r) else ""
-            # per-cell truncation depending on width
-            approx = max(10, int(w / 6))  # rough char fit
-            c.drawString(x + 3, y - 13, _truncate(cell_text, approx))
-            x += w
-        y -= row_h
+        page_rows = rows[page_idx * page_size:(page_idx + 1) * page_size]
+
+        y = draw_page_header(page_idx + 1)
+        draw_footer()
+        y = draw_table_header(y)
+
+        for local_i, row in enumerate(page_rows):
+            # C# zebra: i % 2 == 0 → White (0-based local index)
+            bg = white if local_i % 2 == 0 else GREY_LIGHTEN3
+            x = margin
+            for col_i, w in enumerate(col_widths):
+                cell_text = row[col_i] if col_i < len(row) else ""
+                _draw_cell(c, x, y, w, ROW_H, str(cell_text), font, DATA_SZ, bg=bg)
+                x += w
+            y -= ROW_H
 
     c.save()
     return buf.getvalue()
@@ -870,71 +936,49 @@ def delete_rows(request: HttpRequest):
 
 @require_POST
 def download_orders_pdf(request: HttpRequest):
-    """
-    Receives list of orders from frontend, generates PDF.
-    """
     not_logged = _session_user_or_json_401(request)
     if not_logged:
         return not_logged
 
     payload = _parse_json_body(request)
     if not isinstance(payload, list) or not payload:
-        return JsonResponse({"success": False, "message": "Order list bo‘sh."}, status=400)
+        return JsonResponse({"success": False, "message": "Order list bo'sh."}, status=400)
 
-    user_id = _get_user_id(request)
-    branch = _get_branch(request)
     full_name = _get_full_name(request)
+    branch    = _get_branch(request)
 
-    # Try to use DB orders (more reliable)
-    ids = []
-    for it in payload:
-        oid = _to_int(it.get("Id") or it.get("OrderId"), 0)
-        if oid > 0:
-            ids.append(oid)
+    # Build rows — № is first column (mirrors index = pageIndex * pageSize + 1 in C#)
+    rows = []
+    for idx, it in enumerate(payload, start=1):
+        rows.append([
+            str(idx),
+            _clean_str(it.get("Category") or it.get("category") or "-") or "-",
+            _clean_str(it.get("Model")    or it.get("model")    or ""),
+            _clean_str(it.get("Dioptriya") or it.get("dioptriya") or ""),
+            str(_to_int(it.get("Miqdor") or it.get("miqdor"), 0)),
+            _clean_str(it.get("Izoh")    or it.get("izoh")    or ""),
+        ])
 
-    orders = list(Order.objects.filter(id__in=ids, user_id=user_id, is_sent=False)) if ids else []
-    if not orders:
-        # fallback: use payload directly
-        rows = []
-        for it in payload:
-            rows.append([
-                _clean_str(it.get("Category") or "-"),
-                _clean_str(it.get("Model") or it.get("model") or "-"),
-                _clean_str(it.get("Dioptriya") or it.get("dioptriya") or "-"),
-                str(_to_int(it.get("Miqdor") or it.get("miqdor"), 0)),
-                _clean_str(it.get("Izoh") or it.get("izoh") or "-"),
-            ])
-    else:
-        # build from DB
-        rows = []
-        for o in orders:
-            rows.append([
-                o.category or "-",
-                o.model or "-",
-                o.dioptriya or "-",
-                str(o.miqdor or 0),
-                o.izoh or "-",
-            ])
-
+    # Columns mirror C# RelativeColumn(0.5, 2, 3, 2, 1, 3)
     pdf_bytes = _build_table_pdf(
-        title="Buyurtma (Optika)",
-        header_lines=[
-            f"Ism: {full_name}",
-            f"Filial: {branch}",
-            f"Sana: {timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M')}",
-        ],
+        full_name=full_name,
+        branch=branch,
         columns=[
-            ("Kategoriya", 95),
-            ("Model", 170),
-            ("Dioptriya", 70),
-            ("Miqdor", 55),
-            ("Izoh", 125),
+            ("№",        0.5),
+            ("Category", 2),
+            ("Model",    3),
+            ("Dioptriya",2),
+            ("Miqdor",   1),
+            ("Izoh",     3),
         ],
         rows=rows,
+        title_line1="Buyurtmalar ro'yxati",
     )
 
+    now = datetime.now()
+    filename = f"{branch}_{now.strftime('%d_%m_%Y')}.pdf"
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
-    resp["Content-Disposition"] = 'attachment; filename="order.pdf"'
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
 
 
@@ -1019,12 +1063,33 @@ def archive_view(request: HttpRequest):
     return render(request, "optika/archive.html", {"archives": archives})
 
 
+def _sort_orders_like_csharp(items):
+    """
+    Mirrors HomeController.SortOrders:
+      OrderBy category → OrderBy model
+      → ThenBy: negatives group (0) before positives (1), unparseable last (2)
+      → ThenBy: within negatives ascending by -d (= -1, -2, -3),
+                within positives ascending by d (= 0.5, 1, 2)
+    """
+    def primary_key(it):
+        cat   = it.get("category") or it.get("Category") or ""
+        model = it.get("model")    or it.get("Model")    or ""
+        d_str = it.get("dioptriya") or it.get("Dioptriya") or ""
+        try:
+            d = float(d_str)
+            group  = 0 if d < 0 else 1
+            within = -d if d < 0 else d   # negatives: -(-1)=1 < -(-2)=2 → -1,-2,-3
+                                           # positives: 0.5 < 1 < 2
+        except (ValueError, TypeError):
+            group  = 2
+            within = 0
+        return (cat, model, group, within)
+
+    return sorted(items, key=primary_key)
+
+
 @require_POST
 def download_archive_pdf(request: HttpRequest):
-    """
-    POST JSON: { id: archiveId }
-    Used by templates/optika/archive.html (button calls /Home/DownloadPdf)
-    """
     not_logged = _session_user_or_json_401(request)
     if not_logged:
         return not_logged
@@ -1037,8 +1102,8 @@ def download_archive_pdf(request: HttpRequest):
     if archive_id <= 0:
         return JsonResponse({"success": False, "message": "archive id xato."}, status=400)
 
-    role = request.session.get("Role")
-    branch = _get_branch(request)
+    role      = request.session.get("Role")
+    branch    = _get_branch(request)
     full_name = _get_full_name(request)
 
     archive = Archive.objects.filter(id=archive_id).first()
@@ -1046,43 +1111,62 @@ def download_archive_pdf(request: HttpRequest):
         return JsonResponse({"success": False, "message": "Arxiv topilmadi."}, status=404)
 
     if role != "Admin" and (archive.filial != branch or archive.user_full_name != full_name):
-        return JsonResponse({"success": False, "message": "Ruxsat yo‘q."}, status=403)
+        return JsonResponse({"success": False, "message": "Ruxsat yo'q."}, status=403)
 
-    items = list(archive.items.all())
+    # Sort items — mirrors SortOrders() call in C#
+    raw_items = [
+        {
+            "category": it.category or "",
+            "model":    it.model    or "",
+            "dioptriya": it.dioptriya or "",
+            "miqdor":   it.miqdor   or 0,
+            "izoh":     it.izoh     or "",
+        }
+        for it in archive.items.all()
+    ]
+    sorted_items = _sort_orders_like_csharp(raw_items)
 
+    # Build rows with 1-based № (mirrors index = pageIndex * pageSize + 1)
     rows = []
-    for it in items:
+    for idx, it in enumerate(sorted_items, start=1):
         rows.append([
-            it.category or "-",
-            it.model or "-",
-            it.dioptriya or "-",
-            str(it.miqdor or 0),
-            it.izoh or "-",
+            str(idx),
+            it["category"] or "-",
+            it["model"]    or "",
+            it["dioptriya"] or "",
+            str(it["miqdor"]),
+            it["izoh"]     or "",
         ])
 
+    # Header date = archive.created_at (NOT datetime.now() — mirrors archive.CreatedAt in C#)
+    archive_dt = archive.created_at
+    if hasattr(archive_dt, "tzinfo") and archive_dt.tzinfo:
+        from django.utils import timezone as tz
+        archive_dt = tz.localtime(archive_dt).replace(tzinfo=None)
+
     pdf_bytes = _build_table_pdf(
-        title="Arxiv Buyurtma (Optika)",
-        header_lines=[
-            f"Ism: {archive.user_full_name or '-'}",
-            f"Filial: {archive.filial or '-'}",
-            f"Sana: {timezone.localtime(archive.created_at).strftime('%Y-%m-%d %H:%M')}",
-        ],
+        full_name=archive.user_full_name or "-",
+        branch=archive.filial or "-",
         columns=[
-            ("Kategoriya", 95),
-            ("Model", 170),
-            ("Dioptriya", 70),
-            ("Miqdor", 55),
-            ("Izoh", 125),
+            ("№",        0.5),
+            ("Category", 2),
+            ("Model",    3),
+            ("Dioptriya",2),
+            ("Miqdor",   1),
+            ("Izoh",     3),
         ],
         rows=rows,
+        title_line1="Buyurtma arxivi",    # C#: "Buyurtma arxivi\n{UserFullName} ({Filial})"
+        header_date=archive_dt,           # C#: archive.CreatedAt, not DateTime.Now
     )
 
     Archive.objects.filter(id=archive.id).update(is_pdf_downloaded=True)
 
+    # filename mirrors C#: {Filial}_{CreatedAt:dd_MM_yyyy}.pdf
+    filename = f"{archive.filial or 'archive'}_{archive_dt.strftime('%d_%m_%Y')}.pdf"
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
-    resp["Content-Disposition"] = 'attachment; filename="archive.pdf"'
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
-
 
 # -----------------------------
 # ADMIN custom panel endpoints (admin.html)
@@ -1182,6 +1266,178 @@ def clear_all_archives(request: HttpRequest):
     return JsonResponse({"success": True, "message": "Barcha arxivlar o‘chirildi."})
 
 
+def _dioptriya_sort_key(d_str: str):
+    """
+    Mirrors the C# double ThenBy/ThenByDescending dioptriya sort:
+      positives first  → ascending  (0, 0.25, 0.5 …)
+      negatives after  → ascending by absolute value  (-0.25, -0.5, -1.0 …)
+    """
+    try:
+        d = float(d_str)
+        return (0, d) if d >= 0 else (1, abs(d))
+    except (ValueError, TypeError):
+        return (2, 0)
+
+
+def _build_archives_pdf(
+    umumiy_rows: list,        # already sorted/grouped summary rows  [cat, model, diop, jami, izoh]
+    filial_groups: dict,      # { filial_name: [[cat, model, diop, miqdor, izoh], ...] }
+    now: datetime,
+) -> bytes:
+    """
+    Two-section PDF mirroring the two container.Page() blocks in C#:
+      Section 1 — Umumiy Jamlanma   (6 columns)
+      Section 2 — Filial kesimida   (7 columns, colour-coded per filial)
+    """
+    font = _try_register_cyrillic_font()
+    buf  = io.BytesIO()
+    page_w, page_h = A4
+    margin = 56.7          # 20 mm — matches page.Margin(20)
+    c = canvas.Canvas(buf, pagesize=A4)
+
+    available_w = page_w - 2 * margin
+
+    # ── shared helpers ────────────────────────────────────────────────────────
+
+    def resolve_widths(weights):
+        total = sum(weights)
+        return [available_w * w / total for w in weights]
+
+    def draw_shared_header():
+        """Mirrors the identical Header() on both pages."""
+        y = page_h - margin
+        try:
+            c.setFont(font + "-Bold", 14)
+        except Exception:
+            c.setFont(font, 14)
+        c.setFillColor(BLUE_DARKEN2)
+        c.drawString(margin, y, "Barcha Buyurtmalar")
+
+        c.setFont(font, FONT_SZ)
+        c.setFillColor(HexColor("#000000"))
+        c.drawRightString(page_w - margin, y, now.strftime("%d/%m/%Y %H:%M"))
+        return y - 20   # gap below header before content starts
+
+    def draw_footer():
+        c.setFont(font, FONT_SZ)
+        c.setFillColor(HexColor("#000000"))
+        c.drawRightString(page_w - margin, margin * 0.5,
+                          f"© {now.year} Optika Loyihasi")
+
+    def draw_col_headers(y, col_names, col_widths):
+        """#E0F7FA header row with bold text — mirrors table.Header()."""
+        x = margin
+        for name, w in zip(col_names, col_widths):
+            _draw_cell(c, x, y, w, ROW_H, name, font, FONT_SZ,
+                       bg=HEADER_BG, bold=True)
+            x += w
+        return y - ROW_H
+
+    def draw_row(y, values, col_widths, bg):
+        x = margin
+        for idx, w in enumerate(col_widths):
+            cell = values[idx] if idx < len(values) else ""
+            _draw_cell(c, x, y, w, ROW_H, str(cell), font, FONT_SZ, bg=bg)
+            x += w
+        return y - ROW_H
+
+    def ensure_space(y, needed=ROW_H + 4):
+        """Start a fresh page if there isn't enough vertical room."""
+        if y < margin + needed:
+            c.showPage()
+            draw_footer()
+            return page_h - margin   # fresh y at top (no shared header on continuation pages)
+        return y
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PAGE 1 — Umumiy Jamlanma
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Columns: №(1) | Kategoriya(2.5) | Model(3.5) | Dioptriya(1.5) | Jami(1.5) | Izoh(4)
+    weights_1  = [1, 2.5, 3.5, 1.5, 1.5, 4]
+    col_w_1    = resolve_widths(weights_1)
+    col_names_1 = ["№", "Kategoriya", "Model", "Dioptriya", "Jami miqdor", "Izoh"]
+
+    y = draw_shared_header()
+    draw_footer()
+
+    # Sub-title: "📊 Umumiy Jamlanma"
+    try:
+        c.setFont(font + "-Bold", 13)
+    except Exception:
+        c.setFont(font, 13)
+    c.setFillColor(HexColor("#000000"))
+    c.drawString(margin, y, "Umumiy Jamlanma")
+    y -= 18   # PaddingBottom(10) equivalent
+
+    y = draw_col_headers(y, col_names_1, col_w_1)
+
+    for idx, row in enumerate(umumiy_rows, start=1):
+        y = ensure_space(y)
+        # C# uses index % 2 == 0 → white, else grey (1-based index)
+        bg = white if idx % 2 == 0 else GREY_LIGHTEN3
+        y = draw_row(y, [str(idx)] + row, col_w_1, bg)
+
+# ═══════════════════════════════════════════════════════════════════════════
+    # PAGE 2+ — Filial kesimida  (one page per filial)
+    # ═══════════════════════════════════════════════════════════════════════════
+    weights_2   = [1, 2.5, 2.5, 4, 1.5, 1.5, 3.5]
+    col_w_2     = resolve_widths(weights_2)
+    col_names_2 = ["№", "Filial", "Kategoriya", "Model", "Dioptriya", "Miqdor", "Izoh"]
+
+    global_idx  = 1
+    color_cycle = 0
+
+    for filial_idx, (filial_name, filial_rows) in enumerate(filial_groups.items()):
+        bg = FILIAL_COLORS[color_cycle % len(FILIAL_COLORS)]
+        color_cycle += 1
+
+        # ── Every filial starts on a fresh page ───────────────────────────────
+        c.showPage()                          # always — first filial also gets its own page
+        y = draw_shared_header()
+        draw_footer()
+
+        # Sub-title "🏬 Filial kesimida" on every filial page for clarity
+        try:
+            c.setFont(font + "-Bold", 13)
+        except Exception:
+            c.setFont(font, 13)
+        c.setFillColor(HexColor("#000000"))
+        c.drawString(margin, y, "Filial kesimida")
+        y -= 18
+
+        # Filial name label — blue bold
+        try:
+            c.setFont(font + "-Bold", 12)
+        except Exception:
+            c.setFont(font, 12)
+        c.setFillColor(BLUE_DARKEN2)
+        c.drawString(margin, y, f"{filial_name}")
+        y -= 16   # PaddingBottom(5)
+
+        y = draw_col_headers(y, col_names_2, col_w_2)
+
+        for row in filial_rows:
+            # Within a single filial page, still handle overflow if rows > page
+            if y < margin + ROW_H + 4:
+                c.showPage()
+                draw_footer()
+                y = page_h - margin
+                # Reprint filial label on continuation pages
+                try:
+                    c.setFont(font + "-Bold", 12)
+                except Exception:
+                    c.setFont(font, 12)
+                c.setFillColor(BLUE_DARKEN2)
+                c.drawString(margin, y, f"{filial_name} (davomi)")
+                y -= 16
+                y = draw_col_headers(y, col_names_2, col_w_2)
+
+            y = draw_row(y, [str(global_idx)] + row, col_w_2, bg)
+            global_idx += 1
+
+    c.save()
+    return buf.getvalue()
+
 @require_POST
 def download_all_archives_pdf(request: HttpRequest):
     not_logged = _session_user_or_json_401(request)
@@ -1191,45 +1447,110 @@ def download_all_archives_pdf(request: HttpRequest):
     if not_admin:
         return not_admin
 
-    archives = list(Archive.objects.all().order_by("-created_at"))
-    rows = []
-    for a in archives:
-        rows.append(["---", "---", "---", "---", f"{a.filial or '-'} | {a.user_full_name or '-'} | {a.created_at:%Y-%m-%d %H:%M}"])
-        for it in a.items.all():
-            rows.append([
-                it.category or "-",
-                it.model or "-",
-                it.dioptriya or "-",
-                str(it.miqdor or 0),
-                it.izoh or "-",
-            ])
-
-    pdf_bytes = _build_table_pdf(
-        title="Barcha Arxiv Buyurtmalar (Optika)",
-        header_lines=[f"Sana: {timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M')}"],
-        columns=[
-            ("Kategoriya", 95),
-            ("Model", 170),
-            ("Dioptriya", 70),
-            ("Miqdor", 55),
-            ("Izoh", 125),
-        ],
-        rows=rows,
+    # ── fetch all items with their archive (mirrors .Include(a => a.Archive)) ──
+    all_items = list(
+        ArchiveItem.objects
+        .select_related("archive")
+        .all()
     )
 
+    # lastCategory — mirrors C# OrderByDescending(x => x.Archive.CreatedAt).FirstOrDefault()?.Category
+    last_item = max(all_items, key=lambda x: x.archive.created_at, default=None)
+    last_category = last_item.category if last_item else None
+
+    def base_sort_key(item):
+        """Mirrors the shared ordering applied before both GroupBy calls."""
+        return (
+            0 if item.category == last_category else 1,  # lastCategory first
+            item.category or "",
+            item.model or "",
+            _dioptriya_sort_key(item.dioptriya or ""),
+        )
+
+    sorted_items = sorted(all_items, key=base_sort_key)
+
+    # ── Umumiy Jamlanma — mirrors first GroupBy + Select ─────────────────────
+    from itertools import groupby
+    from collections import defaultdict
+
+    umumiy_rows = []
+    # group by (Category, Model, Dioptriya)
+    for key, group_iter in groupby(
+        sorted_items,
+        key=lambda x: (x.category or "", x.model or "", x.dioptriya or "")
+    ):
+        group = list(group_iter)
+        category, model, dioptriya = key
+        jami  = sum(i.miqdor or 0 for i in group)
+        izoh  = ", ".join(
+            {i.izoh for i in group if i.izoh and i.izoh.strip()}
+        ) or "-"
+        umumiy_rows.append([
+            category or "-",
+            model    or "-",
+            dioptriya or "-",
+            str(jami),
+            izoh,
+        ])
+
+    # ── Filial kesimi — mirrors second GroupBy + Select + OrderBy(Filial) ────
+    # group by (Filial, Category, Model, Dioptriya)
+    filial_flat = []
+    for key, group_iter in groupby(
+        sorted_items,
+        key=lambda x: (
+            x.archive.filial or "",
+            x.category or "",
+            x.model or "",
+            x.dioptriya or "",
+        )
+    ):
+        group = list(group_iter)
+        filial, category, model, dioptriya = key
+        miqdor = sum(i.miqdor or 0 for i in group)
+        izoh   = ", ".join(
+            {i.izoh for i in group if i.izoh and i.izoh.strip()}
+        ) or "-"
+        filial_flat.append({
+            "filial":    filial,
+            "category":  category or "-",
+            "model":     model    or "-",
+            "dioptriya": dioptriya or "-",
+            "miqdor":    str(miqdor),
+            "izoh":      izoh,
+        })
+
+    # OrderBy(x => x.Filial) at the end
+    filial_flat.sort(key=lambda x: x["filial"])
+
+    # Build {filial: [rows]} dict preserving order (mirrors GroupBy(x => x.Filial))
+    filial_groups: dict[str, list] = {}
+    for item in filial_flat:
+        filial_groups.setdefault(item["filial"], []).append([
+            item["category"],
+            item["model"],
+            item["dioptriya"],
+            item["miqdor"],
+            item["izoh"],
+        ])
+
+    # ── generate PDF ──────────────────────────────────────────────────────────
+    now = datetime.now()
+    pdf_bytes = _build_archives_pdf(
+        umumiy_rows=umumiy_rows,
+        filial_groups=filial_groups,
+        now=now,
+    )
+
+    # Mark all archives as downloaded — mirrors C# block at the end
     Archive.objects.all().update(is_pdf_downloaded=True)
 
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
-    resp["Content-Disposition"] = 'attachment; filename="all_archives.pdf"'
+    resp["Content-Disposition"] = 'attachment; filename="Barcha_Buyurtmalar.pdf"'
     return resp
-
 
 @require_POST
 def share_all_archives_telegram(request: HttpRequest):
-    """
-    Sends a single PDF of all archives to all TelegramChat.chat_id.
-    Requires settings.TELEGRAM_BOT_TOKEN.
-    """
     not_logged = _session_user_or_json_401(request)
     if not_logged:
         return not_logged
@@ -1239,63 +1560,95 @@ def share_all_archives_telegram(request: HttpRequest):
 
     token = getattr(settings, "TELEGRAM_BOT_TOKEN", None)
     if not token:
-        return JsonResponse({
-            "success": False,
-            "message": "TELEGRAM_BOT_TOKEN topilmadi. settings.py ga TELEGRAM_BOT_TOKEN = 'xxxxx' qo‘shing."
-        }, status=500)
+        return JsonResponse({"success": False, "message": "TELEGRAM_BOT_TOKEN topilmadi."}, status=500)
+
+    all_items = list(ArchiveItem.objects.select_related("archive").all())
+    if not all_items:
+        return JsonResponse({"success": False, "message": "Arxiv bo'sh."}, status=400)
 
     chats = list(TelegramChat.objects.all())
     if not chats:
-        return JsonResponse({"success": False, "message": "Telegram chat IDlar yo‘q."}, status=400)
+        return JsonResponse({"success": False, "message": "Telegram chat IDlar yo'q."}, status=400)
 
-    # build PDF (same as download_all)
-    archives = list(Archive.objects.all().order_by("-created_at"))
-    rows = []
-    for a in archives:
-        rows.append(["---", "---", "---", "---", f"{a.filial or '-'} | {a.user_full_name or '-'} | {a.created_at:%Y-%m-%d %H:%M}"])
-        for it in a.items.all():
-            rows.append([
-                it.category or "-",
-                it.model or "-",
-                it.dioptriya or "-",
-                str(it.miqdor or 0),
-                it.izoh or "-",
-            ])
+    # ── Build PDF using SAME logic as download_all_archives_pdf ──────────────
+    last_item     = max(all_items, key=lambda x: x.archive.created_at, default=None)
+    last_category = last_item.category if last_item else None
 
-    pdf_bytes = _build_table_pdf(
-        title="Arxiv Buyurtmalar (Optika)",
-        header_lines=[f"Sana: {timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M')}"],
-        columns=[
-            ("Kategoriya", 95),
-            ("Model", 170),
-            ("Dioptriya", 70),
-            ("Miqdor", 55),
-            ("Izoh", 125),
-        ],
-        rows=rows,
+    def base_sort_key(item):
+        return (
+            0 if item.category == last_category else 1,
+            item.category or "",
+            item.model    or "",
+            _dioptriya_sort_key(item.dioptriya or ""),
+        )
+
+    sorted_items = sorted(all_items, key=base_sort_key)
+
+    from itertools import groupby
+
+    umumiy_rows = []
+    for key, group_iter in groupby(
+        sorted_items,
+        key=lambda x: (x.category or "", x.model or "", x.dioptriya or "")
+    ):
+        group = list(group_iter)
+        category, model, dioptriya = key
+        jami = sum(i.miqdor or 0 for i in group)
+        izoh = ", ".join(
+            {i.izoh for i in group if i.izoh and i.izoh.strip()}
+        ) or "-"
+        umumiy_rows.append([category or "-", model or "-", dioptriya or "-", str(jami), izoh])
+
+    filial_flat = []
+    for key, group_iter in groupby(
+        sorted_items,
+        key=lambda x: (x.archive.filial or "", x.category or "", x.model or "", x.dioptriya or "")
+    ):
+        group = list(group_iter)
+        filial, category, model, dioptriya = key
+        miqdor = sum(i.miqdor or 0 for i in group)
+        izoh   = ", ".join(
+            {i.izoh for i in group if i.izoh and i.izoh.strip()}
+        ) or "-"
+        filial_flat.append({
+            "filial": filial, "category": category or "-", "model": model or "-",
+            "dioptriya": dioptriya or "-", "miqdor": str(miqdor), "izoh": izoh,
+        })
+
+    filial_flat.sort(key=lambda x: x["filial"])
+    filial_groups: dict = {}
+    for item in filial_flat:
+        filial_groups.setdefault(item["filial"], []).append([
+            item["category"], item["model"], item["dioptriya"], item["miqdor"], item["izoh"],
+        ])
+
+    now = datetime.now()
+    pdf_bytes = _build_archives_pdf(           # same function as download_all_archives_pdf
+        umumiy_rows=umumiy_rows,
+        filial_groups=filial_groups,
+        now=now,
     )
 
-    # send via Telegram Bot API
+    # ── Send to Telegram ──────────────────────────────────────────────────────
     try:
-        import requests
-    except Exception:
-        return JsonResponse({
-            "success": False,
-            "message": "requests kutubxonasi kerak: pip install requests"
-        }, status=500)
+        import requests as req_lib
+    except ImportError:
+        return JsonResponse({"success": False, "message": "pip install requests"}, status=500)
 
-    url = f"https://api.telegram.org/bot{token}/sendDocument"
+    url      = f"https://api.telegram.org/bot{token}/sendDocument"
     ok_count = 0
+    filename = f"Buyurtmalar_{now.strftime('%Y-%m-%d_%H-%M')}.pdf"
 
     for ch in chats:
         try:
-            files = {"document": ("archives.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
-            data = {"chat_id": ch.chat_id, "caption": "Optika buyurtmalar (PDF)"}
-            r = requests.post(url, data=data, files=files, timeout=30)
-            if r.ok:
-                j = r.json()
-                if j.get("ok"):
-                    ok_count += 1
+            r = req_lib.post(
+                url,
+                data={"chat_id": ch.chat_id, "caption": "📦 Barcha buyurtmalar PDF fayli"},
+                files={"document": (filename, io.BytesIO(pdf_bytes), "application/pdf")},
+                timeout=30,
+            )
+            if r.ok and r.json().get("ok"):
+                ok_count += 1
         except Exception:
             continue
 
@@ -1303,12 +1656,7 @@ def share_all_archives_telegram(request: HttpRequest):
         return JsonResponse({"success": False, "message": "Telegramga yuborilmadi."}, status=500)
 
     Archive.objects.all().update(is_telegram_shared=True)
-
-    return JsonResponse({
-        "success": True,
-        "message": f"Telegramga yuborildi ({ok_count}/{len(chats)})"
-    })
-
+    return JsonResponse({"success": True, "message": f"Yuborildi ({ok_count}/{len(chats)})"})
 
 # -----------------------------
 # FEEDBACK: user + admin feedback
@@ -1375,40 +1723,120 @@ def clear_all_feedback(request: HttpRequest):
     return redirect("/Home/AdminFeedBack")
 
 
+def _build_feedback_pdf(feedbacks) -> bytes:
+    """
+    Mirrors HomeController.ExportToPdf exactly:
+    - Margin 30, centered bold title FontSize 18
+    - Header BG #DDEEFF (not #E0F7FA)
+    - Data border 0.5 (not 1), zebra #FFFFFF / #F8F9FA
+    - Footer: "Sahifa yaratilgan: dd.MM.yyyy HH:mm", color #777
+    - Columns: Ism(2) | Telefon(2) | Taklif matni(5) | Sana(3)
+    """
+    font   = _try_register_cyrillic_font()
+    buf    = io.BytesIO()
+    now    = datetime.now()
+    page_w, page_h = A4
+    margin = 85.05   # 30 mm in points — matches page.Margin(30)
+    available_w = page_w - 2 * margin
+
+    weights    = [2, 2, 5, 3]
+    total_w    = sum(weights)
+    col_widths = [available_w * w / total_w for w in weights]
+    col_names  = ["Ism Familiya", "Telefon", "Taklif matni", "Sana"]
+
+    HEADER_BG_FB  = HexColor("#DDEEFF")   # feedback-specific header colour
+    ZEBRA_WHITE   = HexColor("#FFFFFF")
+    ZEBRA_GREY_FB = HexColor("#F8F9FA")   # feedback-specific zebra colour
+    FOOTER_GREY   = HexColor("#777777")
+    BORDER_THIN   = 0.5
+
+    c = canvas.Canvas(buf, pagesize=A4)
+
+    def draw_cell_fb(x, y, w, h, text, bg, bold=False, border=BORDER_THIN):
+        if bg:
+            c.setFillColor(bg)
+            c.rect(x, y - h, w, h, stroke=0, fill=1)
+        c.setStrokeColor(HexColor("#000000"))
+        c.setLineWidth(border)
+        c.rect(x, y - h, w, h, stroke=1, fill=0)
+        c.setLineWidth(1)  # reset
+        c.setFillColor(HexColor("#000000"))
+        try:
+            c.setFont(font + ("-Bold" if bold else ""), 10)
+        except Exception:
+            c.setFont(font, 10)
+        max_chars = max(5, int(w / (10 * 0.55)))
+        c.drawString(x + 5, y - h + 5, _truncate(text, max_chars))
+
+    # ── Title — Bold, FontSize 18, centered ──────────────────────────────────
+    y = page_h - margin
+    try:
+        c.setFont(font + "-Bold", 18)
+    except Exception:
+        c.setFont(font, 18)
+    c.setFillColor(HexColor("#000000"))
+    c.drawCentredString(page_w / 2, y, "Foydalanuvchi Takliflari")
+    y -= 28   # PaddingVertical(10) equivalent gap
+
+    # ── Table header ─────────────────────────────────────────────────────────
+    x = margin
+    for name, w in zip(col_names, col_widths):
+        draw_cell_fb(x, y, w, ROW_H, name, HEADER_BG_FB, bold=True, border=1)
+        x += w
+    y -= ROW_H
+
+    # ── Data rows ─────────────────────────────────────────────────────────────
+    for idx, fb in enumerate(feedbacks, start=1):
+        # Page overflow check
+        if y < margin + ROW_H + 20:
+            c.showPage()
+            y = page_h - margin
+
+        bg = ZEBRA_WHITE if idx % 2 == 0 else ZEBRA_GREY_FB
+
+        # Column order mirrors C#: FullName | Phone | Message | CreatedAt
+        values = [
+            fb.full_name or "-",
+            fb.phone     or "-",
+            fb.message   or "-",
+            fb.created_at.strftime("%d.%m.%Y %H:%M"),
+        ]
+
+        x = margin
+        for val, w in zip(values, col_widths):
+            draw_cell_fb(x, y, w, ROW_H, val, bg, border=BORDER_THIN)
+            x += w
+        y -= ROW_H
+
+    # ── Footer — right-aligned, color #777 ───────────────────────────────────
+    c.setFont(font, 10)
+    c.setFillColor(FOOTER_GREY)
+    c.drawRightString(page_w - margin, margin * 0.5,
+                      f"Sahifa yaratilgan: {now.strftime('%d.%m.%Y %H:%M')}")
+
+    c.save()
+    return buf.getvalue()
+
+
 @require_GET
 def export_feedback_pdf(request: HttpRequest):
     redir = _session_user_or_redirect(request)
     if redir:
         return redir
     if request.session.get("Role") != "Admin":
-        return redirect("index")
+        return redirect("optika:index")
 
     feedbacks = list(FeedBack.objects.all().order_by("-created_at"))
-    rows = []
-    for f in feedbacks:
-        rows.append([
-            f.full_name or "-",
-            f.phone or "-",
-            f.created_at.strftime("%Y-%m-%d %H:%M"),
-            f.message or "-",
-        ])
+    if not feedbacks:
+        messages.error(request, "PDF yaratish uchun takliflar topilmadi.")
+        return redirect("/Home/AdminFeedBack")
 
-    pdf_bytes = _build_table_pdf(
-        title="Feedbacklar (Optika)",
-        header_lines=[f"Sana: {timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M')}"],
-        columns=[
-            ("Ism", 130),
-            ("Telefon", 90),
-            ("Sana", 110),
-            ("Xabar", 185),
-        ],
-        rows=rows,
-    )
+    pdf_bytes = _build_feedback_pdf(feedbacks)
 
+    now = datetime.now()
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")
-    resp["Content-Disposition"] = 'attachment; filename="feedback.pdf"'
+    resp["Content-Disposition"] = f'attachment; filename="Takliflar_{now.strftime("%Y_%m_%d")}.pdf"'
     return resp
-
 
 # -----------------------------
 # USERS management + Telegram chat IDs (admin)
