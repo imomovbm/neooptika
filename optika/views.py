@@ -21,7 +21,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-
+import os
 from .models import (
     Users, Order,
     Rangsiz, Rangli, Kapliya, Aksessuar, Antikompyuter, Oprava, Gatoviy,
@@ -106,33 +106,19 @@ def _clean_str(value: Any) -> str:
 # PDF helpers (ReportLab)
 # -----------------------------
 
-_PDF_FONT_NAME = "Helvetica"
-
-
 def _try_register_cyrillic_font() -> str:
-    """
-    Tries to register DejaVuSans for Cyrillic text.
-    If not found, fall back to Helvetica.
-    """
-    global _PDF_FONT_NAME
-    if _PDF_FONT_NAME != "Helvetica":
-        return _PDF_FONT_NAME
+    font_path = os.path.join(
+        settings.BASE_DIR,
+        "static",
+        "fonts",
+        "DejaVuSans.ttf"
+    )
 
-    candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
-    ]
-    for path in candidates:
-        try:
-            pdfmetrics.registerFont(TTFont("DejaVuSans", path))
-            _PDF_FONT_NAME = "DejaVuSans"
-            return _PDF_FONT_NAME
-        except Exception:
-            continue
+    if os.path.exists(font_path):
+        pdfmetrics.registerFont(TTFont("DejaVuSans", font_path))
+        return "DejaVuSans"
 
-    _PDF_FONT_NAME = "Helvetica"
-    return _PDF_FONT_NAME
-
+    return "Helvetica"
 
 def _truncate(text: str, max_len: int) -> str:
     text = text or ""
@@ -211,7 +197,6 @@ def _build_table_pdf(
 
     c.save()
     return buf.getvalue()
-
 
 # -----------------------------
 # Category -> model mapping (for profile edits/deletes)

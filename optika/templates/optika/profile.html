@@ -261,7 +261,7 @@
   document.getElementById("sendBtn").addEventListener("click", async () => {
     const rows = Array.from(tbody.querySelectorAll("tr"));
     if (rows.length === 0) { alert("Buyurtma mavjud emas!"); return; }
-    if (!confirm("Ma’lumotlarni adminga yuborishtan oldin tekshiring uni bekor qilish mumkin emas. yuborishni tasdiqlaysizmi?")) return;
+    if (!confirm("Ma’lumotlarni adminga yuborishdan oldin tekshiring, uni bekor qilish mumkin emas. Yuborishni tasdiqlaysizmi?")) return;
 
     const orders = rows.map(tr => ({
       Id: Number(tr.dataset.id),
