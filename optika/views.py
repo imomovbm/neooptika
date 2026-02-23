@@ -370,13 +370,19 @@ def login_view(request: HttpRequest):
     if not ok:
         return JsonResponse({"success": False, "message": "Login yoki parol noto'g'ri!"})
 
+    # Branch required only for regular users
+    if user.role != "Admin" and not branch:
+        return JsonResponse({"success": False, "message": "Filialni tanlang!"})
+
     request.session["UserId"] = user.user_id
     request.session["FullName"] = user.full_name
     request.session["Role"] = user.role
     if branch:
         request.session["Branch"] = branch
+    elif user.role == "Admin":
+        request.session["Branch"] = "Admin"  # fallback branch for admin
 
-    request.session.save()  # ← ADD THIS
+    request.session.save()  
 
     return JsonResponse({
         "success": True,
