@@ -35,7 +35,7 @@
               ✏️
             </button>
 
-            <a href="/Home/DeleteUser?id={{ u.id }}"
+            <a href="{% url 'optika:delete_user' %}?id={{ u.id }}"
               onclick="return confirm('Haqiqatan ham o‘chirmoqchimisiz?')"
               style="background:#d32f2f; color:#fff; padding:6px 12px; border-radius:8px; text-decoration:none; font-size:14px; font-weight:600;">
               🗑️
@@ -44,7 +44,7 @@
         </div>
 
         <div class="edit-mode" style="display:none; margin-top:15px;">
-          <form action="/Home/EditUser" method="post" style="display:flex; flex-direction:column; gap:10px;">
+          <form action="{% url 'optika:edit_user' %}" method="post" style="display:flex; flex-direction:column; gap:10px;">
             {% csrf_token %}
             <input type="hidden" name="Id" value="{{ u.id }}" />
             <input name="FullName" value="{{ u.full_name }}" placeholder="FIO" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
@@ -75,7 +75,7 @@
   </div>
 
   <div id="addUserForm" style="display:none; max-width:600px; margin:20px auto; background:white; border-radius:12px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
-    <form action="/Home/AddUser" method="post" style="display:flex; flex-direction:column; gap:10px;">
+    <form action="{% url 'optika:add_user' %}" method="post" style="display:flex; flex-direction:column; gap:10px;">
       {% csrf_token %}
       <input name="FullName" placeholder="Ism Familiya" style="padding:8px; border:1px solid #ccc; border-radius:6px;">
       <input name="Phone" placeholder="Telefon" style="padding:8px; border:1px solid #ccc; border-radius:6px;">

@@ -48,8 +48,12 @@
 <div id="products" class="products-container"></div>
 
 <div class="action-buttons">
-  <button class="save-btn" id="saveBtn" type="button">Saqlash</button>
-  <button class="exit-btn" id="exitBtn" type="button">Chiqish</button>
+  {% if request.session.Role == "Admin" %}
+  <button type="#" class="save-btn" disabled>ADMIN</button>
+  {% else %}
+  <button type="submit" class="save-btn">Saqlash</button>
+  <button type="button" class="exit-btn" id="backBtn">Chiqish</button>
+  {% endif %}    
 </div>
 
 <table id="selectedTable">
@@ -65,6 +69,9 @@
 </table>
 
 <script>
+  const SAVE_URL = "{% url 'optika:save_antik' %}";
+   const HOME_URL = "{% url 'optika:index' %}";
+
   const products = [
     { name: "Антикомп. Terra Pro", price: 120000 },
     { name: "Антикомп деш. FB", price: 60000 },
@@ -147,9 +154,9 @@
   document.getElementById("exitBtn").addEventListener("click", () => {
     const hasData = Array.from(tableBody.children).some(r => Number(r.cells[3].textContent) > 0 || r.cells[2].textContent.trim() !== "");
     if (hasData) {
-      if (confirm("Miqdor yoki izoh kiritilgan, chiqishni xohlaysizmi?")) window.location.href = "/Home/Index";
+      if (confirm("Miqdor yoki izoh kiritilgan, chiqishni xohlaysizmi?")) window.location.href = HOME_URL;
     } else {
-      window.location.href = "/Home/Index";
+      window.location.href = HOME_URL;
     }
   });
 
@@ -170,7 +177,7 @@
       return;
     }
 
-    const response = await fetch("/Linza/SaveAntik", {
+    const response = await fetch(SAVE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
       body: JSON.stringify(selected)
@@ -179,7 +186,7 @@
     if (response.ok) {
       const data = await response.json();
       alert(data.message);
-      if (data.success && data.redirectUrl) window.location.href = data.redirectUrl;
+      if (data.success) window.location.href = HOME_URL;
     } else {
       alert("Xatolik yuz berdi!");
     }

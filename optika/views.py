@@ -2,7 +2,7 @@ import io
 import json
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple, Type
-
+from django.urls import reverse
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
@@ -148,7 +148,7 @@ def _admin_or_403(request: HttpRequest) -> Optional[JsonResponse]:
 
 def _admin_or_redirect(request: HttpRequest):
     if request.session.get("Role") != "Admin":
-        return redirect("index")
+        return redirect("optika:index")
     return None
 
 
@@ -243,8 +243,8 @@ def _build_table_pdf(
     total_pages = max(1, math.ceil(len(rows) / page_size))
     c = canvas.Canvas(buf, pagesize=A4)
 
-    DATA_SZ = 12    # matches C# FontSize(12) on data spans
-    HDR_SZ  = 12    # matches C# FontSize(12) on header spans
+    DATA_SZ = 8    # matches C# FontSize(12) on data spans
+    HDR_SZ  = 10    # matches C# FontSize(12) on header spans
 
     def draw_page_header(page_num: int):
         y = page_h - margin
@@ -337,14 +337,13 @@ CATEGORY_MODEL: Dict[str, Type[Any]] = {
 @ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def login_view(request: HttpRequest):
-    """
-    GET  -> render login page
-    POST -> validate and set session, return JSON
-    """
     if request.method == "GET":
+        # If already logged in, redirect to index
+        if request.session.get("UserId"):
+            return redirect("optika:index")
         return render(request, "optika/login.html")
 
-    user_id = _clean_str(request.POST.get("userId"))
+    user_id = _clean_str(request.POST.get("userId")).lower()
     password = _clean_str(request.POST.get("password"))
     branch = _clean_str(request.POST.get("branch"))
 
@@ -354,9 +353,8 @@ def login_view(request: HttpRequest):
     try:
         user = Users.objects.get(user_id=user_id)
     except Users.DoesNotExist:
-        return JsonResponse({"success": False, "message": "Login yoki parol noto‘g‘ri!"})
+        return JsonResponse({"success": False, "message": "Login yoki parol noto'g'ri!"})
 
-    # check hashed first; if DB has plain text, upgrade on first login
     ok = False
     if user.parol:
         try:
@@ -370,7 +368,7 @@ def login_view(request: HttpRequest):
         user.save(update_fields=["parol"])
 
     if not ok:
-        return JsonResponse({"success": False, "message": "Login yoki parol noto‘g‘ri!"})
+        return JsonResponse({"success": False, "message": "Login yoki parol noto'g'ri!"})
 
     request.session["UserId"] = user.user_id
     request.session["FullName"] = user.full_name
@@ -378,7 +376,12 @@ def login_view(request: HttpRequest):
     if branch:
         request.session["Branch"] = branch
 
-    return JsonResponse({"success": True})
+    request.session.save()  # ← ADD THIS
+
+    return JsonResponse({
+        "success": True,
+        "redirectUrl": reverse("optika:index")
+    })
 
 
 def logout_view(request: HttpRequest):
@@ -638,7 +641,7 @@ def save_rangsiz(request: HttpRequest):
                 rasm=rasm,
             )
 
-    return JsonResponse({"success": True, "message": "Rangsiz linzalar saqlandi", "redirectUrl": "/Home/Index"})
+    return JsonResponse({"success": True, "message": "Rangsiz linzalar saqlandi", "redirectUrl": reverse("optika:index")})
 
 
 @require_POST
@@ -675,7 +678,7 @@ def save_rangli(request: HttpRequest):
                 turi=item.get("turi"),
             )
 
-    return JsonResponse({"success": True, "message": "Rangli linzalar saqlandi", "redirectUrl": "/Home/Index"})
+    return JsonResponse({"success": True, "message": "Rangli linzalar saqlandi", "redirectUrl": reverse("optika:index")})
 
 
 @require_POST
@@ -713,7 +716,7 @@ def save_kapliya(request: HttpRequest):
                 izoh=item.get("izoh") or "",
             )
 
-    return JsonResponse({"success": True, "message": "Kaplyalar saqlandi", "redirectUrl": "/Home/Index"})
+    return JsonResponse({"success": True, "message": "Kaplyalar saqlandi", "redirectUrl": reverse("optika:index")})
 
 
 @require_POST
@@ -754,7 +757,7 @@ def save_aksessuar(request: HttpRequest):
                 rasm=rasm,
             )
 
-    return JsonResponse({"success": True, "message": "Aksessuarlar saqlandi", "redirectUrl": "/Home/Index"})
+    return JsonResponse({"success": True, "message": "Aksessuarlar saqlandi", "redirectUrl": reverse("optika:index")})
 
 
 @require_POST
@@ -793,7 +796,7 @@ def save_antik(request: HttpRequest):
                 turi=turi or None,
             )
 
-    return JsonResponse({"success": True, "message": "Antikompyuterlar saqlandi", "redirectUrl": "/Home/Index"})
+    return JsonResponse({"success": True, "message": "Antikompyuterlar saqlandi", "redirectUrl": reverse("optika:index")})
 
 
 @require_POST
@@ -836,7 +839,7 @@ def save_gatoviy(request: HttpRequest):
                 },
             )
 
-    return JsonResponse({"success": True, "message": "Gatoviylar saqlandi", "redirectUrl": "/Home/Index"})
+    return JsonResponse({"success": True, "message": "Gatoviylar saqlandi", "redirectUrl": reverse("optika:index")})
 
 
 @require_POST
@@ -874,7 +877,7 @@ def save_oprava(request: HttpRequest):
                 izoh=izoh,
             )
 
-    return JsonResponse({"success": True, "message": "Opravalar saqlandi", "redirectUrl": "/Home/Index"})
+    return JsonResponse({"success": True, "message": "Opravalar saqlandi", "redirectUrl": reverse("optika:index")})
 
 
 # -----------------------------
@@ -1791,7 +1794,7 @@ def clear_all_feedback(request: HttpRequest):
 
     FeedBack.objects.all().delete()
     messages.success(request, "Barcha feedbacklar o‘chirildi.")
-    return redirect("/Home/AdminFeedBack")
+    return redirect("optika:admin_feedback_page")
 
 
 def _build_feedback_pdf(feedbacks) -> bytes:
@@ -1900,7 +1903,7 @@ def export_feedback_pdf(request: HttpRequest):
     feedbacks = list(FeedBack.objects.all().order_by("-created_at"))
     if not feedbacks:
         messages.error(request, "PDF yaratish uchun takliflar topilmadi.")
-        return redirect("/Home/AdminFeedBack")
+        return redirect("optika:admin_feedback_page")
 
     pdf_bytes = _build_feedback_pdf(feedbacks)
 
@@ -1930,23 +1933,23 @@ def add_user_page_and_create(request: HttpRequest):
     if request.method == "POST":
         full_name = _clean_str(request.POST.get("FullName"))
         phone = _clean_str(request.POST.get("Phone"))
-        user_id = _clean_str(request.POST.get("UserId"))
+        user_id = _clean_str(request.POST.get("UserId")).lower()
         parol = _clean_str(request.POST.get("Parol"))
         role = _clean_str(request.POST.get("Role")) or "User"
 
         if not full_name or not user_id or not parol:
             messages.error(request, "FullName, UserId, Parol majburiy.")
-            return redirect("/Home/AddUser")
+            return redirect("optika:add_user")
 
         if Users.objects.filter(user_id=user_id).exists():
             messages.error(request, "Bunday UserId mavjud.")
-            return redirect("/Home/AddUser")
+            return redirect("optika:add_user")
 
         u = Users(full_name=full_name, phone=phone, user_id=user_id, role=role)
         u.set_password(parol)
         u.save()
         messages.success(request, "Foydalanuvchi qo‘shildi.")
-        return redirect("/Home/AddUser")
+        return redirect("optika:add_user")
 
     users = Users.objects.all().order_by("role", "full_name")
     return render(request, "optika/add_user.html", {"users": users})
@@ -1958,24 +1961,24 @@ def edit_user(request: HttpRequest):
     if redir:
         return redir
     if request.session.get("Role") != "Admin":
-        return redirect("index")
+        return redirect("optika:index")
 
     uid = _to_int(request.POST.get("Id"), 0)
     user = Users.objects.filter(id=uid).first()
     if not user:
         messages.error(request, "User topilmadi.")
-        return redirect("/Home/AddUser")
+        return redirect("optika:add_user")
 
     full_name = _clean_str(request.POST.get("FullName"))
     phone = _clean_str(request.POST.get("Phone"))
-    user_id_val = _clean_str(request.POST.get("UserId"))
+    user_id_val = _clean_str(request.POST.get("UserId")).lower()
     new_pass = _clean_str(request.POST.get("Parol"))
     role = _clean_str(request.POST.get("Role")) or "User"
 
     if user_id_val and user_id_val != user.user_id:
         if Users.objects.filter(user_id=user_id_val).exclude(id=user.id).exists():
             messages.error(request, "Bunday UserId mavjud.")
-            return redirect("/Home/AddUser")
+            return redirect("optika:add_user")
         user.user_id = user_id_val
 
     user.full_name = full_name or user.full_name
@@ -1987,7 +1990,7 @@ def edit_user(request: HttpRequest):
 
     user.save()
     messages.success(request, "User yangilandi.")
-    return redirect("/Home/AddUser")
+    return redirect("optika:add_user")
 
 
 @require_GET
@@ -1996,13 +1999,13 @@ def delete_user(request: HttpRequest):
     if redir:
         return redir
     if request.session.get("Role") != "Admin":
-        return redirect("index")
+        return redirect("optika:index")
 
     uid = _to_int(request.GET.get("id"), 0)
     if uid > 0:
         Users.objects.filter(id=uid).delete()
         messages.success(request, "User o‘chirildi.")
-    return redirect("/Home/AddUser")
+    return redirect("optika:add_user")
 
 
 @ensure_csrf_cookie
@@ -2025,22 +2028,22 @@ def add_chat(request: HttpRequest):
     if redir:
         return redir
     if request.session.get("Role") != "Admin":
-        return redirect("index")
+        return redirect("optika:index")
 
     full_name = _clean_str(request.POST.get("FullName"))
     chat_id = _clean_str(request.POST.get("ChatId"))
 
     if not full_name or not chat_id:
         messages.error(request, "FullName va ChatId majburiy.")
-        return redirect("/Home/TelegramChatId")
+        return redirect("optika:telegram_chat_id_page")
 
     if TelegramChat.objects.filter(chat_id=chat_id).exists():
         messages.error(request, "Bu ChatId mavjud.")
-        return redirect("/Home/TelegramChatId")
+        return redirect("optika:telegram_chat_id_page")
 
     TelegramChat.objects.create(full_name=full_name, chat_id=chat_id)
     messages.success(request, "Chat ID qo‘shildi.")
-    return redirect("/Home/TelegramChatId")
+    return redirect("optika:telegram_chat_id_page")
 
 
 @require_POST
@@ -2049,10 +2052,10 @@ def delete_chat(request: HttpRequest):
     if redir:
         return redir
     if request.session.get("Role") != "Admin":
-        return redirect("index")
+        return redirect("optika:index")
 
     cid = _to_int(request.POST.get("id"), 0)
     if cid > 0:
         TelegramChat.objects.filter(id=cid).delete()
         messages.success(request, "Chat ID o‘chirildi.")
-    return redirect("/Home/TelegramChatId")
+    return redirect("optika:telegram_chat_id_page")

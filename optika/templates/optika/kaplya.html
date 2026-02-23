@@ -73,10 +73,14 @@
 
 <div class="drop-container" id="dropContainer"></div>
 
-<div class="action-buttons">
-  <button id="saveBtn" class="save-btn" type="button">Saqlash</button>
-  <button id="homeBtn" class="exit-btn" type="button">Chiqish</button>
-</div>
+  <div class="action-buttons">
+    {% if request.session.Role == "Admin" %}
+    <button type="#" class="save-btn" disabled>ADMIN</button>
+    {% else %}
+    <button type="submit" class="save-btn">Saqlash</button>
+    <button type="button" class="exit-btn" id="backBtn">Chiqish</button>
+    {% endif %}    
+  </div>
 
 <table id="selectedTable">
   <thead>
@@ -91,6 +95,9 @@
 </table>
 
 <script>
+  const HOME_URL = "{% url 'optika:index' %}";
+  const SAVE_URL = "{% url 'optika:save_kapliya' %}";
+
   const STATIC_PREFIX = "{{ STATIC_PREFIX }}";
 
   const drops = [
@@ -187,10 +194,10 @@
   document.getElementById("homeBtn").addEventListener("click", () => {
     if (tbody.innerHTML.trim() !== "") {
       if (confirm("Chiqishni xohlaysizmi? O‘zgarishlar saqlanmaydi.")) {
-        window.location.href = "/Home/Index";
+        window.location.href = HOME_URL;
       }
     } else {
-      window.location.href = "/Home/Index";
+      window.location.href = HOME_URL;
     }
   });
 
@@ -213,7 +220,7 @@
       return;
     }
 
-    const response = await fetch("/Linza/SaveKapliya", {
+    const response = await fetch(SAVE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

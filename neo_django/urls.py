@@ -25,7 +25,6 @@ from django.views.generic import RedirectView
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 urlpatterns = [
-    path("", RedirectView.as_view(url="/Home/Login", permanent=False)),
     path("admin/", admin.site.urls),
     path('', include('optika.urls')),
 ]

@@ -84,8 +84,12 @@
 <div id="framesContainer"></div>
 
 <div class="action-buttons">
-  <button class="save-btn" id="saveBtn" type="button">Saqlash</button>
-  <button class="exit-btn" id="exitBtn" type="button">Chiqish</button>
+  {% if request.session.Role == "Admin" %}
+  <button type="#" class="save-btn" disabled>ADMIN</button>
+  {% else %}
+  <button type="submit" class="save-btn">Saqlash</button>
+  <button type="button" class="exit-btn" id="backBtn">Chiqish</button>
+  {% endif %}    
 </div>
 
 <table id="selectedTable">
@@ -101,6 +105,9 @@
 </table>
 
 <script>
+  const HOME_URL = "{% url 'optika:index' %}";
+  const SAVE_URL = "{% url 'optika:save_oprava' %}";
+
   const framesData = [
     "Alfraganus", "Alanie", "Bagozza", "Bsloc. sor.", "Carmen Cortes", "Carolina Herera",
     "Corrado", "Enzo", "Fabricio", "Fabricio детс. резинка", "Ferucci", "Ideal деш.", "Ideal дор.",
@@ -254,7 +261,7 @@
       return;
     }
 
-    fetch('/Linza/SaveOprava', {
+    fetch(SAVE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
       body: JSON.stringify(data)
@@ -263,7 +270,7 @@
     .then(res => {
       if (res.success) {
         alert("Ma'lumotlar bazaga saqlandi!");
-        window.location.href = "/Home/Index";
+        window.location.href = HOME_URL;
       } else {
         alert("Xatolik yuz berdi!");
       }
@@ -277,10 +284,10 @@
     });
     if (hasValue) {
       if (confirm("Sizda kiritilgan qiymatlar mavjud. Rostdan chiqishni xohlaysizmi?")) {
-        window.location.href = '/Home/Index';
+        window.location.href = HOME_URL;
       }
     } else {
-      window.location.href = '/Home/Index';
+      window.location.href = HOME_URL;
     }
   });
 </script>

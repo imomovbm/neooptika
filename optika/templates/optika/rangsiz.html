@@ -62,8 +62,12 @@ input[type="text"], select {
   <div id="dioptriyaContainer" class="dioptriya-container"></div>
 
   <div class="action-buttons">
+    {% if request.session.Role == "Admin" %}
+    <button type="#" class="save-btn" disabled>ADMIN</button>
+    {% else %}
     <button type="submit" class="save-btn">Saqlash</button>
-    <button type="button" id="backBtn" class="exit-btn">Chiqish</button>
+    <button type="button" class="exit-btn" id="backBtn">Chiqish</button>
+    {% endif %}    
   </div>
 </form>
 
@@ -79,6 +83,8 @@ input[type="text"], select {
 </table>
 
 <script>
+  const HOME_URL = "{% url 'optika:index' %}";
+  const SAVE_URL = "{% url 'optika:save_rangsiz' %}";
 /* ---------------- CSRF helper (Django) ---------------- */
 function getCookie(name) {
   let cookieValue = null;
@@ -245,10 +251,10 @@ backBtn.addEventListener("click", () => {
 
   if (hasValue) {
     if (confirm("Hali ba'zi miqdorlar kiritilgan. Chiqishni xohlaysizmi?")) {
-      window.location.href = "/Home/Index";
+      window.location.href = HOME_URL;
     }
   } else {
-    window.location.href = "/Home/Index";
+    window.location.href = HOME_URL;
   }
 });
 
@@ -282,7 +288,7 @@ form.addEventListener("submit", async (e) => {
   }
 
   try {
-    const res = await fetch("/Linza/SaveRangsiz", {
+    const res = await fetch(SAVE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

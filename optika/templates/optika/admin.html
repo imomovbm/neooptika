@@ -101,28 +101,30 @@
 </div>
 
 <script>
-  document.getElementById('clearAllBtn').onclick = async () => {
-    if (!confirm("Barcha arxiv buyurtmalarini o‘chirmoqchimisiz?")) return;
+  // ── All backend URLs declared once here ──────────────────────────────────
+  const URL_CLEAR_ARCHIVES    = "{% url 'optika:clear_all_archives' %}";
+  const URL_SHARE_TELEGRAM    = "{% url 'optika:share_all_archives_telegram' %}";
+  const URL_DOWNLOAD_ALL_PDF  = "{% url 'optika:download_all_archives_pdf' %}";
+  const URL_GET_ARCHIVES      = "{% url 'optika:get_archives' %}";
+  const URL_GET_ARCHIVE_ITEMS = "{% url 'optika:get_archive_items' %}";
+  const URL_DELETE_ARCHIVE    = "{% url 'optika:delete_archive' %}";
 
-    const res = await fetch('/Home/ClearAllArchives', {
+  // ── Button handlers ───────────────────────────────────────────────────────
+  document.getElementById('clearAllBtn').onclick = async () => {
+    if (!confirm("Barcha arxiv buyurtmalarini o'chirmoqchimisiz?")) return;
+
+    const res = await fetch(URL_CLEAR_ARCHIVES, {
       method: 'POST',
       headers: { 'X-CSRFToken': CSRF_TOKEN }
     });
 
-    if (!res.ok) {
-      alert("Xatolik yuz berdi!");
-      return;
-    }
+    if (!res.ok) { alert("Xatolik yuz berdi!"); return; }
 
     const data = await res.json();
     if (data.success) {
       alert(data.message);
-
-      const table = document.getElementById('adminTable');
-      if (table) table.remove();
-
       const container = document.querySelector('.table-wrapper');
-      if (container) container.innerHTML = "<p>Barcha buyurtmalar o‘chirildi.</p>";
+      if (container) container.innerHTML = "<p>Barcha buyurtmalar o'chirildi.</p>";
     } else {
       alert("Xatolik yuz berdi: " + data.message);
     }
@@ -131,7 +133,7 @@
   document.getElementById('shareTelegramBtn').onclick = async () => {
     if (!confirm("PDF faylini Telegram orqali yuborishga ruxsat berasizmi?")) return;
 
-    const res = await fetch('/Home/ShareAllArchivesTelegram', {
+    const res = await fetch(URL_SHARE_TELEGRAM, {
       method: 'POST',
       headers: { 'X-CSRFToken': CSRF_TOKEN }
     });
@@ -141,14 +143,14 @@
       alert("✅ " + data.message);
       loadArchives();
     } else {
-      alert("❌ Xatolik yuz berdi, qaytadan urinib ko‘ring");
+      alert("❌ Xatolik yuz berdi, qaytadan urinib ko'ring");
     }
   };
 
   document.getElementById('downloadAllBtn').onclick = async () => {
     if (!confirm("PDF faylni yuklab olishni xohlaysizmi?")) return;
 
-    const res = await fetch('/Home/DownloadAllArchivesPdf', {
+    const res = await fetch(URL_DOWNLOAD_ALL_PDF, {
       method: 'POST',
       headers: { 'X-CSRFToken': CSRF_TOKEN }
     });
@@ -158,7 +160,7 @@
     const blob = await res.blob();
     const pad = n => n.toString().padStart(2, '0');
     const now = new Date();
-    const filename = `Buyurtma_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}.pdf`;
+    const filename = `Buyurtma_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}.pdf`;
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
@@ -167,46 +169,43 @@
     loadArchives();
   };
 
-  const modal = document.getElementById('modal');
+  // ── Modal ─────────────────────────────────────────────────────────────────
+  const modal     = document.getElementById('modal');
   const modalBody = document.getElementById('modalBody');
-  const closeModal = document.getElementById('closeModal');
-  closeModal.addEventListener('click', () => modal.style.display = 'none');
+  document.getElementById('closeModal').addEventListener('click', () => modal.style.display = 'none');
 
+  // ── Load archives table ───────────────────────────────────────────────────
   async function loadArchives() {
-    const res = await fetch('/Home/GetArchives');
+    const res      = await fetch(URL_GET_ARCHIVES);
     const archives = await res.json();
-
-    const tbody = document.getElementById("adminTableBody");
+    const tbody    = document.getElementById("adminTableBody");
     tbody.innerHTML = "";
 
     archives.forEach(a => {
-      const tr = document.createElement("tr");
-
-      const createdAt = a.createdAt || a.created_at;
-      const filial = a.filial || a.Filial || "-";
-      const fullName = a.userFullName || a.user_full_name || a.userFullName || "-";
-      const isTelegramShared = a.isTelegramShared ?? a.is_telegram_shared ?? false;
-      const isPdfDownloaded = a.isPdfDownloaded ?? a.is_pdf_downloaded ?? false;
-      const id = a.id || a.Id;
+      const tr          = document.createElement("tr");
+      const createdAt   = a.createdAt || a.created_at;
+      const filial      = a.filial || "-";
+      const fullName    = a.userFullName || "-";
+      const isTelegram  = a.isTelegramShared ?? false;
+      const isPdf       = a.isPdfDownloaded ?? false;
+      const id          = a.id;
 
       let icons = "";
-      if (isTelegramShared) icons += ' <i class="fa-brands fa-telegram" style="color:#0088cc;" title="Telegramga yuborilgan"></i>';
-      if (isPdfDownloaded) icons += ' <i class="fa-solid fa-file-pdf" style="color:red;" title="PDF yuklab olingan"></i>';
+      if (isTelegram) icons += ' <i class="fa-brands fa-telegram" style="color:#0088cc;" title="Telegramga yuborilgan"></i>';
+      if (isPdf)      icons += ' <i class="fa-solid fa-file-pdf" style="color:red;" title="PDF yuklab olingan"></i>';
 
       tr.innerHTML = `
         <td>
           ${createdAt ? new Date(createdAt).toLocaleDateString() : ""}
-          <br>
-          ${icons}
+          <br>${icons}
         </td>
         <td>${filial}</td>
         <td>${fullName}</td>
         <td>
-          <button class="view-btn action-btn" data-id="${id}" title="Ko‘rish"><i class="fa-solid fa-eye"></i></button>
-          <button class="delete-btn action-btn" data-id="${id}" title="O‘chirish"><i class="fa-solid fa-trash"></i></button>
+          <button class="view-btn action-btn"   data-id="${id}" title="Ko'rish"><i class="fa-solid fa-eye"></i></button>
+          <button class="delete-btn action-btn" data-id="${id}" title="O'chirish"><i class="fa-solid fa-trash"></i></button>
         </td>
       `;
-
       tbody.appendChild(tr);
     });
 
@@ -216,14 +215,14 @@
   function attachEvents() {
     document.querySelectorAll('.view-btn').forEach(btn => {
       btn.onclick = async e => {
-        const id = e.target.closest('button').dataset.id;
-        const res = await fetch(`/Home/GetArchiveItems?archiveId=${id}`);
+        const id  = e.target.closest('button').dataset.id;
+        const res = await fetch(`${URL_GET_ARCHIVE_ITEMS}?archiveId=${id}`);
         const items = await res.json();
 
         modalBody.innerHTML = `
           <h3>Buyurtma Tafsiloti</h3>
           <div class="table-wrapper">
-            <table style="width:100%; border-collapse: collapse; margin-top:10px;">
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
               <thead>
                 <tr style="background:#004080; color:#fff;">
                   <th style="border:1px solid #000; padding:5px;">№</th>
@@ -239,57 +238,49 @@
         `;
 
         const tbody = document.getElementById("modalTableBody");
-        items.slice(0,10).forEach((i,index)=>{
-          const tr=document.createElement("tr");
-          tr.innerHTML = `
-            <td style="border:1px solid #000; padding:5px;">${index+1}</td>
-            <td style="border:1px solid #000; padding:5px;">${i.category ?? i.Category ?? "-"}</td>
-            <td style="border:1px solid #000; padding:5px;">${i.model ?? i.Model ?? "-"}</td>
-            <td style="border:1px solid #000; padding:5px;">${i.miqdor ?? i.Miqdor ?? 0}</td>`;
-          tbody.appendChild(tr);
-        });
 
-        if(items.length>10){
+        const renderRows = (list) => {
+          tbody.innerHTML = "";
+          list.forEach((item, index) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td style="border:1px solid #000; padding:5px;">${index + 1}</td>
+              <td style="border:1px solid #000; padding:5px;">${item.category ?? "-"}</td>
+              <td style="border:1px solid #000; padding:5px;">${item.model ?? "-"}</td>
+              <td style="border:1px solid #000; padding:5px;">${item.miqdor ?? 0}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        };
+
+        renderRows(items.slice(0, 10));
+
+        if (items.length > 10) {
           const btn = document.createElement("button");
-          btn.textContent="Barchasini ko‘rsatish";
-          btn.style.cssText="margin-top:10px; padding:5px 15px; background:#004080; color:#fff; border:none; cursor:pointer; border-radius:5px;";
-          btn.onclick = () => {
-            tbody.innerHTML="";
-            items.forEach((i,index)=>{
-              const tr=document.createElement("tr");
-              tr.innerHTML = `
-                <td style="border:1px solid #000; padding:5px;">${index+1}</td>
-                <td style="border:1px solid #000; padding:5px;">${i.category ?? i.Category ?? "-"}</td>
-                <td style="border:1px solid #000; padding:5px;">${i.model ?? i.Model ?? "-"}</td>
-                <td style="border:1px solid #000; padding:5px;">${i.miqdor ?? i.Miqdor ?? 0}</td>`;
-              tbody.appendChild(tr);
-            });
-            btn.remove();
-          };
+          btn.textContent = "Barchasini ko'rsatish";
+          btn.style.cssText = "margin-top:10px; padding:5px 15px; background:#004080; color:#fff; border:none; cursor:pointer; border-radius:5px;";
+          btn.onclick = () => { renderRows(items); btn.remove(); };
           document.getElementById("showAllWrapper").appendChild(btn);
         }
 
-        modal.style.display='flex';
+        modal.style.display = 'flex';
       };
     });
 
-    document.querySelectorAll('.delete-btn').forEach(btn=>{
+    document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.onclick = async e => {
         const id = e.target.closest('button').dataset.id;
-        if(!confirm("Rostdan ham ushbu buyurtmani o‘chirmoqchimisiz?")) return;
+        if (!confirm("Rostdan ham ushbu buyurtmani o'chirmoqchimisiz?")) return;
 
-        const res = await fetch(`/Home/DeleteArchive`,{
-          method:'POST',
-          headers:{
-            'Content-Type':'application/json',
-            'X-CSRFToken': CSRF_TOKEN
-          },
-          body: JSON.stringify({ArchiveId:Number(id)})
+        const res = await fetch(URL_DELETE_ARCHIVE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ ArchiveId: Number(id) })
         });
 
         const data = await res.json();
-        if(data.success) e.target.closest('tr').remove();
-        else alert("O‘chirishda xatolik yuz berdi");
+        if (data.success) e.target.closest('tr').remove();
+        else alert("O'chirishda xatolik yuz berdi");
       };
     });
   }

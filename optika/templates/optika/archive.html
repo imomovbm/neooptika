@@ -76,6 +76,8 @@
 </div>
 
 <script>
+  const DOWNLOAD_URL = "{% url 'optika:download_archive_pdf' %}";
+
   document.querySelectorAll(".download-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
@@ -86,7 +88,7 @@
       if (!confirm("Haqiqatan ham yuklab olmoqchimisiz?")) return;
 
       try {
-        const res = await fetch("/Home/DownloadPdf", {
+        const res = await fetch(DOWNLOAD_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
           body: JSON.stringify({ id: parseInt(id) })

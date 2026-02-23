@@ -87,18 +87,18 @@
 <div class="center-wrapper">
   <div class="categories">
     <a href="#" id="kontaktLinza" class="category-card"><span>Kontakt Linza</span></a>
-    <a href="/Linza/Kaplya" id="kaplyaCard" class="category-card"><span>Kaplya</span></a>
-    <a href="/Linza/Aksessuar" id="aksessuarCard" class="category-card"><span>Aksessuarlar</span></a>
-    <a href="/Linza/Oprava" id="opravaCard" class="category-card"><span>Opravalar</span></a>
-    <a href="/Linza/Gatoviy" id="gatoviyCard" class="category-card"><span>Gatoviylar</span></a>
-    <a href="/Linza/Antikomp" id="antikompCard" class="category-card"><span>Antikompyuter</span></a>
+    <a href="{% url 'optika:kaplya_page' %}" id="kaplyaCard" class="category-card"><span>Kaplya</span></a>
+    <a href="{% url 'optika:aksessuar_page' %}" id="aksessuarCard" class="category-card"><span>Aksessuarlar</span></a>
+    <a href="{% url 'optika:oprava_page' %}" id="opravaCard" class="category-card"><span>Opravalar</span></a>
+    <a href="{% url 'optika:gatoviy_page' %}" id="gatoviyCard" class="category-card"><span>Gatoviylar</span></a>
+    <a href="{% url 'optika:antikomp_page' %}" id="antikompCard"  class="category-card"><span>Antikompyuter</span></a>
   </div>
 </div>
 
 <div id="overlay"></div>
 <div id="subCategories">
-  <button class="sub-btn rangli" data-url="/Linza/Rangli">Rangli (Dox)</button>
-  <button class="sub-btn rangsiz" data-url="/Linza/Rangsiz">Rangsiz (Acuve Oasys)</button>
+  <button class="sub-btn rangli" data-url="{% url 'optika:rangli_page' %}">Rangli (Dox)</button>
+  <button class="sub-btn rangsiz" data-url="{% url 'optika:rangsiz_page' %}">Rangsiz (Acuve Oasys)</button>
 </div>
 
 <script>

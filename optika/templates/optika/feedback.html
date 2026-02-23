@@ -41,6 +41,7 @@
 </div>
 
 <script>
+  const SEND_URL = "{% url 'optika:send_feedback' %}";
   const message = document.getElementById("message");
   const charCount = document.getElementById("charCount");
   const sendBtn = document.getElementById("sendBtn");
@@ -74,7 +75,7 @@
       sendBtn.disabled = true;
       sendBtn.innerText = "Yuborilmoqda...";
 
-      const res = await fetch('/Home/SendFeedback', {
+      const res = await fetch(SEND_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

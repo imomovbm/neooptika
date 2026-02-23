@@ -111,6 +111,11 @@
 </div>
 
 <script>
+  const SAVE_ROW_URL = "{% url 'optika:save_profile_row' %}";
+  const DELETE_URL = "{% url 'optika:delete_rows' %}";
+  const DOWNLOAD_PDF_URL = "{% url 'optika:download_orders_pdf' %}";
+  const MARK_SENT_URL = "{% url 'optika:mark_as_sent' %}";
+
   document.addEventListener("DOMContentLoaded", () => {
     const toggleBtn = document.getElementById("toggleBtn");
     if (toggleBtn) {
@@ -140,7 +145,7 @@
 
   function saveToServer(rowId, miqdor, izoh) {
     const category = activeRow.dataset.category;
-    fetch('/Linza/Save', {
+    fetch(SAVE_ROW_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -244,7 +249,7 @@
     });
 
     try {
-      const res = await fetch("/Linza/DeleteRows", {
+      const res = await fetch(DELETE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -276,7 +281,7 @@
     const branch = document.getElementById("branchSpan").innerText.split(":")[1].trim();
 
     try {
-      const pdfRes = await fetch('/Linza/DownloadPdf', {
+      const pdfRes = await fetch(DOWNLOAD_PDF_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -298,7 +303,7 @@
       a.click();
       a.remove();
 
-      const res = await fetch('/Linza/MarkAsSent', {
+      const res = await fetch(MARK_SENT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -44,12 +44,12 @@
   </div>
 
   <div style="display:flex; justify-content:center; flex-wrap:wrap; gap:15px; margin-top:25px;">
-    <a href="/Home/ExportToPdf"
+    <a href="{% url 'optika:export_feedback_pdf' %}"
        style="background:#004080; color:#fff; padding:10px 18px; border:none; border-radius:8px; text-decoration:none; font-weight:bold; transition:0.3s;">
       <i class="fa-solid fa-file-pdf"></i> PDF ga yuklash
     </a>
 
-    <form method="post" action="/Home/ClearAllFeedBack"
+    <form method="post" action="{% url 'optika:clear_all_feedback' %}"
           onsubmit="return confirm('Barcha takliflarni o‘chirishni istaysizmi?')" style="margin:0;">
       {% csrf_token %}
       <button type="submit"
