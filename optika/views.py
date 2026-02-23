@@ -33,6 +33,42 @@ from reportlab.lib.colors import HexColor, white
 from datetime import datetime
 import math
 
+LINE_H   = 11   # height of one text line inside a cell (points)
+CELL_PAD = 4    # top + bottom inner padding (points)
+
+def _wrap_text(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
+    """
+    Word-wrap `text` so each line fits within `max_width` points.
+    Returns a list of line strings (at least one).
+    """
+    usable = max_width - 6   # 3pt left + 3pt right padding
+    words  = (text or "").split()
+    if not words:
+        return [""]
+
+    lines, current = [], ""
+    for word in words:
+        candidate = (current + " " + word).strip() if current else word
+        try:
+            w = pdfmetrics.stringWidth(candidate, font_name, font_size)
+        except Exception:
+            w = len(candidate) * font_size * 0.6   # fallback estimate
+        if w <= usable:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
+def _cell_h(n_lines: int) -> float:
+    """Row height needed to fit n_lines of text."""
+    return max(ROW_H, n_lines * LINE_H + CELL_PAD * 2)
+
+
 # ─── colours matching QuestPDF / MudBlazor equivalents ───────────────────────
 BLUE_DARKEN2   = HexColor("#1565C0")
 HEADER_BG      = HexColor("#E0F7FA")   # #E0F7FA — same as order PDF
@@ -58,8 +94,14 @@ def _draw_cell(
     text_color: HexColor = None,
     bold: bool = False,
 ):
-    """Draw one table cell with optional background fill, border, and text."""
-    # Fill background
+    """Draw one table cell with word-wrapped text, background fill, and border."""
+    active_font = (font + "-Bold") if bold else font
+    try:
+        pdfmetrics.stringWidth("x", active_font, font_size)
+    except Exception:
+        active_font = font
+
+    # Background fill
     if bg is not None:
         c.setFillColor(bg)
         c.rect(x, y - h, w, h, stroke=0, fill=1)
@@ -68,18 +110,20 @@ def _draw_cell(
     c.setStrokeColor(HexColor("#000000"))
     c.rect(x, y - h, w, h, stroke=1, fill=0)
 
-    # Text
+    # Word-wrap and draw each line
+    lines = _wrap_text(str(text or ""), active_font, font_size, w)
     c.setFillColor(text_color if text_color else HexColor("#000000"))
-    # Use bold font variant if available and requested
-    active_font = (font + "-Bold") if bold else font
     try:
         c.setFont(active_font, font_size)
-    except:
+    except Exception:
         c.setFont(font, font_size)
 
-    max_chars = max(5, int(w / (font_size * 0.55)))  # approximate char fit
-    c.drawString(x + 3, y - h + 5, _truncate(text, max_chars))
-
+    # Start text from top of cell with padding
+    text_y = y - CELL_PAD - LINE_H + 2
+    for line in lines:
+        if text_y > (y - h + 2):   # don't draw below cell bottom
+            c.drawString(x + 3, text_y, line)
+        text_y -= LINE_H
 # -----------------------------
 # Session helpers
 # -----------------------------
@@ -239,7 +283,7 @@ def _build_table_pdf(
         c.setFont(font, 10)
         c.setFillColor(HexColor("#000000"))
         c.drawRightString(page_w - margin, margin,
-                          f"© {datetime.now().year} Optika Loyihasi")
+                          f"© {datetime.now().year} neeoptika.uz")
 
     for page_idx in range(total_pages):
         if page_idx > 0:
@@ -252,14 +296,21 @@ def _build_table_pdf(
         y = draw_table_header(y)
 
         for local_i, row in enumerate(page_rows):
-            # C# zebra: i % 2 == 0 → White (0-based local index)
             bg = white if local_i % 2 == 0 else GREY_LIGHTEN3
+
+            # Pre-calculate dynamic row height
+            row_height = ROW_H
+            for col_i, cw in enumerate(col_widths):
+                text = str(row[col_i]) if col_i < len(row) else ""
+                lines = _wrap_text(text, font, DATA_SZ, cw)
+                row_height = max(row_height, _cell_h(len(lines)))
+
             x = margin
-            for col_i, w in enumerate(col_widths):
+            for col_i, cw in enumerate(col_widths):
                 cell_text = row[col_i] if col_i < len(row) else ""
-                _draw_cell(c, x, y, w, ROW_H, str(cell_text), font, DATA_SZ, bg=bg)
-                x += w
-            y -= ROW_H
+                _draw_cell(c, x, y, cw, row_height, str(cell_text), font, DATA_SZ, bg=bg)
+                x += cw
+            y -= row_height
 
     c.save()
     return buf.getvalue()
@@ -1322,10 +1373,10 @@ def _build_archives_pdf(
         c.setFont(font, FONT_SZ)
         c.setFillColor(HexColor("#000000"))
         c.drawRightString(page_w - margin, margin * 0.5,
-                          f"© {now.year} Optika Loyihasi")
+                          f"© {now.year} neeoptika.uz")
 
     def draw_col_headers(y, col_names, col_widths):
-        """#E0F7FA header row with bold text — mirrors table.Header()."""
+        """Header row — fixed height ROW_H, bold, #E0F7FA background."""
         x = margin
         for name, w in zip(col_names, col_widths):
             _draw_cell(c, x, y, w, ROW_H, name, font, FONT_SZ,
@@ -1334,12 +1385,27 @@ def _build_archives_pdf(
         return y - ROW_H
 
     def draw_row(y, values, col_widths, bg):
+        """
+        Draw one data row with dynamic height based on the tallest cell.
+        Returns new y (y minus the row height used).
+        """
+        active_font = font   # non-bold for data rows
+
+        # Pre-calculate height needed for every cell in this row
+        row_height = ROW_H
+        for idx, w in enumerate(col_widths):
+            text = str(values[idx]) if idx < len(values) else ""
+            lines = _wrap_text(text, active_font, FONT_SZ, w)
+            row_height = max(row_height, _cell_h(len(lines)))
+
+        # Now draw all cells using the agreed row_height
         x = margin
         for idx, w in enumerate(col_widths):
-            cell = values[idx] if idx < len(values) else ""
-            _draw_cell(c, x, y, w, ROW_H, str(cell), font, FONT_SZ, bg=bg)
+            text = str(values[idx]) if idx < len(values) else ""
+            _draw_cell(c, x, y, w, row_height, text, font, FONT_SZ, bg=bg)
             x += w
-        return y - ROW_H
+
+        return y - row_height
 
     def ensure_space(y, needed=ROW_H + 4):
         """Start a fresh page if there isn't enough vertical room."""
@@ -1417,12 +1483,17 @@ def _build_archives_pdf(
         y = draw_col_headers(y, col_names_2, col_w_2)
 
         for row in filial_rows:
-            # Within a single filial page, still handle overflow if rows > page
-            if y < margin + ROW_H + 4:
+            # Estimate height before drawing to check for overflow
+            row_height = ROW_H
+            for idx, cw in enumerate(col_w_2):
+                text = str(row[idx]) if idx < len(row) else ""
+                lines = _wrap_text(text, font, FONT_SZ, cw)
+                row_height = max(row_height, _cell_h(len(lines)))
+
+            if y < margin + row_height + 4:
                 c.showPage()
                 draw_footer()
                 y = page_h - margin
-                # Reprint filial label on continuation pages
                 try:
                     c.setFont(font + "-Bold", 12)
                 except Exception:
