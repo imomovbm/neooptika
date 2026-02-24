@@ -65,7 +65,7 @@ input[type="text"], select {
     {% if request.session.Role == "Admin" %}
     <button type="button" class="save-btn" disabled>ADMIN</button>
     {% else %}
-    <button type="button" class="save-btn" id="saveBtn">Saqlash</button>
+    <button type="submit" class="save-btn" id="saveBtn">Saqlash</button>
     <button type="button" class="exit-btn" id="exitBtn">Chiqish</button>
     {% endif %}
   </div>
@@ -107,7 +107,7 @@ const container = document.getElementById("dioptriyaContainer");
 const resultTable = document.getElementById("selectedTable");
 const tbody = resultTable.querySelector("tbody");
 const brandSelect = document.getElementById("brand");
-const backBtn = document.getElementById("backBtn");
+const backBtn = document.getElementById("exitBtn");
 const form = document.getElementById("linzaForm");
 
 /* ---------------- State ---------------- */

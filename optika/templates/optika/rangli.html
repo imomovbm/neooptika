@@ -65,7 +65,7 @@
     {% if request.session.Role == "Admin" %}
     <button type="button" class="save-btn" disabled>ADMIN</button>
     {% else %}
-    <button type="button" class="save-btn" id="saveBtn">Saqlash</button>
+    <button type="submit" class="save-btn">Saqlash</button>
     <button type="button" class="exit-btn" id="exitBtn">Chiqish</button>
     {% endif %}
   </div>
@@ -262,7 +262,7 @@
     container.appendChild(card);
   });
 
-  document.getElementById("backBtn").addEventListener("click", () => {
+  document.getElementById("exitBtn").addEventListener("click", () => {
     let inputs = container.querySelectorAll(".counter input");
     let hasValue = Array.from(inputs).some(inp => Number(inp.value) > 0);
 
