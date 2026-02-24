@@ -99,11 +99,11 @@
 
 <div class="action-buttons">
   {% if request.session.Role == "Admin" %}
-  <button type="#" class="save-btn" disabled>ADMIN</button>
+  <button type="button" class="save-btn" disabled>ADMIN</button>
   {% else %}
-  <button type="submit" class="save-btn">Saqlash</button>
-  <button type="button" class="exit-btn" id="backBtn">Chiqish</button>
-  {% endif %}    
+  <button type="button" class="save-btn" id="saveBtn">Saqlash</button>
+  <button type="button" class="exit-btn" id="exitBtn">Chiqish</button>
+  {% endif %}
 </div>
 
 <table id="selectedTable">
