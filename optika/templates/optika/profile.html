@@ -163,25 +163,26 @@
     }).catch(err => alert(err.message));
   }
 
+  // closeActiveRow: use orderid for saving
   function closeActiveRow() {
-    if (!activeRow) return;
+      if (!activeRow) return;
+      const miqdorTd = activeRow.querySelector(".miqdor");
+      const izohTd = activeRow.querySelector(".izoh");
+      const miqdorInput = miqdorTd.querySelector("input");
+      const izohInput = izohTd.querySelector("input");
 
-    const miqdorTd = activeRow.querySelector(".miqdor");
-    const izohTd = activeRow.querySelector(".izoh");
-    const miqdorInput = miqdorTd.querySelector("input");
-    const izohInput = izohTd.querySelector("input");
+      if (miqdorInput) {
+          miqdorTd.innerText = miqdorInput.value;
+          miqdorTd.dataset.value = miqdorInput.value;
+      }
+      if (izohInput) {
+          izohTd.innerText = izohInput.value;
+          izohTd.dataset.value = izohInput.value;
+      }
 
-    if (miqdorInput) {
-      miqdorTd.innerText = miqdorInput.value;
-      miqdorTd.dataset.value = miqdorInput.value;
-    }
-    if (izohInput) {
-      izohTd.innerText = izohInput.value;
-      izohTd.dataset.value = izohInput.value;
-    }
-
-    saveToServer(Number(activeRow.dataset.id), Number(miqdorTd.dataset.value), izohTd.dataset.value);
-    activeRow = null;
+      // ✅ Use orderid (Order PK), not id (product_id)
+      saveToServer(Number(activeRow.dataset.orderid), Number(miqdorTd.dataset.value), izohTd.dataset.value);
+      activeRow = null;
   }
 
   tbody.addEventListener("click", function (e) {
@@ -239,7 +240,7 @@
     const items = Array.from(checked).map(c => {
       const tr = c.closest("tr");
       return {
-        Id: Number(tr.dataset.id),
+        Id: Number(tr.dataset.orderid),
         Category: tr.dataset.category,
         Model: tr.children[1].innerText,
         Dioptriya: tr.children[2].innerText,
