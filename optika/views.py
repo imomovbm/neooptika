@@ -1455,9 +1455,9 @@ def _build_archives_pdf(
 # ═══════════════════════════════════════════════════════════════════════════
     # PAGE 2+ — Filial kesimida  (one page per filial)
     # ═══════════════════════════════════════════════════════════════════════════
-    weights_2   = [1, 2.5, 2.5, 4, 1.5, 1.5, 3.5]
+    weights_2   = [1, 2.5, 3.5, 1.5, 1, 4.5]
     col_w_2     = resolve_widths(weights_2)
-    col_names_2 = ["№", "Filial", "Kategoriya", "Model", "Dioptriya", "Miqdor", "Izoh"]
+    col_names_2 = ["№", "Kategoriya", "Model", "Dioptriya", "Miqdor", "Izoh"]
 
     global_idx  = 1
     color_cycle = 0
@@ -1492,10 +1492,11 @@ def _build_archives_pdf(
         y = draw_col_headers(y, col_names_2, col_w_2)
 
         for row in filial_rows:
-            # Estimate height before drawing to check for overflow
+            row_values = [str(global_idx)] + row
+
             row_height = ROW_H
             for idx, cw in enumerate(col_w_2):
-                text = str(row[idx]) if idx < len(row) else ""
+                text = str(row_values[idx]) if idx < len(row_values) else ""
                 lines = _wrap_text(text, font, FONT_SZ, cw)
                 row_height = max(row_height, _cell_h(len(lines)))
 
@@ -1512,7 +1513,7 @@ def _build_archives_pdf(
                 y -= 16
                 y = draw_col_headers(y, col_names_2, col_w_2)
 
-            y = draw_row(y, [str(global_idx)] + row, col_w_2, bg)
+            y = draw_row(y, row_values, col_w_2, bg)
             global_idx += 1
 
     c.save()
